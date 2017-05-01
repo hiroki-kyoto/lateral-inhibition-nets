@@ -149,4 +149,45 @@ K.~Ganguly, A.~F. Schinder, S.~T. Wong, and M.-m. Poo, ``Gaba itself promotes
   the developmental switch of neuronal gabaergic responses from excitation to
   inhibition,'' \emph{Cell}, vol. 105, no.~4, pp. 521--532, 2001.
 
+\bibitem{amari1977dynamics}
+S.-i. Amari, ``Dynamics of pattern formation in lateral-inhibition type neural
+  fields,'' \emph{Biological cybernetics}, vol.~27, no.~2, pp. 77--87, 1977.
+
+\bibitem{blakemore1972lateral}
+C.~Blakemore and E.~A. Tobin, ``Lateral inhibition between orientation
+  detectors in the cat's visual cortex,'' \emph{Experimental Brain Research},
+  vol.~15, no.~4, pp. 439--440, 1972.
+
+\bibitem{blakemore1970lateral}
+C.~Blakemore, R.~H. Carpenter, and M.~A. Georgeson, ``Lateral inhibition
+  between orientation detectors in the human visual system.'' \emph{Nature},
+  1970.
+
+\bibitem{jaderberg2014speeding}
+M.~Jaderberg, A.~Vedaldi, and A.~Zisserman, ``Speeding up convolutional neural
+  networks with low rank expansions,'' \emph{arXiv preprint arXiv:1405.3866},
+  2014.
+
+\bibitem{chen2015compressing}
+W.~Chen, J.~T. Wilson, S.~Tyree, K.~Q. Weinberger, and Y.~Chen, ``Compressing
+  convolutional neural networks,'' \emph{arXiv preprint arXiv:1506.04449},
+  2015.
+
+\bibitem{masci2011stacked}
+J.~Masci, U.~Meier, D.~Cire{\c{s}}an, and J.~Schmidhuber, ``Stacked
+  convolutional auto-encoders for hierarchical feature extraction,''
+  \emph{Artificial Neural Networks and Machine Learning--ICANN 2011}, pp.
+  52--59, 2011.
+
+\bibitem{hinton2012improving}
+G.~E. Hinton, N.~Srivastava, A.~Krizhevsky, I.~Sutskever, and R.~R.
+  Salakhutdinov, ``Improving neural networks by preventing co-adaptation of
+  feature detectors,'' \emph{arXiv preprint arXiv:1207.0580}, 2012.
+
+\bibitem{wan2013regularization}
+L.~Wan, M.~Zeiler, S.~Zhang, Y.~L. Cun, and R.~Fergus, ``Regularization of
+  neural networks using dropconnect,'' in \emph{Proceedings of the 30th
+  International Conference on Machine Learning (ICML-13)}, 2013, pp.
+  1058--1066.
+
 \end{thebibliography}

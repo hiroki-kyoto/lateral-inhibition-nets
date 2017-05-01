@@ -217,11 +217,11 @@
 
 
 % *** SUBFIGURE PACKAGES ***
-%\ifCLASSOPTIONcompsoc
-%  \usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
-%\else
-%  \usepackage[caption=false,font=footnotesize]{subfig}
-%\fi
+\ifCLASSOPTIONcompsoc
+  \usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\else
+  \usepackage[caption=false,font=footnotesize]{subfig}
+\fi
 % subfig.sty, written by Steven Douglas Cochran, is the modern replacement
 % for subfigure.sty, the latter of which is no longer maintained and is
 % incompatible with some LaTeX packages including fixltx2e. However,
@@ -319,7 +319,7 @@
 % not capitalized unless they are the first or last word of the title.
 % Linebreaks \\ can be used within to get better formatting as desired.
 % Do not put math or special symbols in the title.
-\title{Data-driven Sparse Connections for \\Deep Convolutional Neural Network}
+\title{Lateral Inhibition Nets with Nonlinear Connections}
 
 
 % author names and affiliations
@@ -379,7 +379,7 @@ Convolutional Neural Networks(CNNs) have achieved great success in
 many computer vision tasks, especially in image recognition. However,
 as neural networks grow deeper and deeper, to some extend, we've found
 them becoming difficult to train, and requiring samples in large scale
-dramatically, even with the help of Dropout and Drop-connect methods,
+dramatically, even with the help of Dropout and Dropconnect methods,
 which do improve the accuracy a bit but burdens the training process as
 a sacrifice. To overcome this, we proposed a novel method to generate
 dynamic graphs of computation for varied inputs. As our computation
@@ -424,30 +424,36 @@ Detectors in higher layers learn to respond to concrete visual objects or
 their parts, e.g.,\cite{zeiler2014visualizing}. Once trained, the CNN never
 changes its weights or filters during evaluation.
 
-\section{Nonlinear Connections with Bounded Parameters}
-Inspired by biological neuron synapses\cite{hall1905textbook,
-bayliss1908reciprocal,gerard1941interaction}, we propose a new computation
-model for connections between neurons. In connection models known so far,
+\section{Nonlinear Connections}
+\subsection{Conventional Connections: Linear Computation Model}
+In connection models known so far,
 the most popular and probably the most useful one \cite{jain1996artificial} is :
 $$ y=\sigma\left(\sum_{i=1}^{N}w_ix_i+b\right) $$
 While, the activation function $\sigma(\cdot)$ can be the sigmoid function
 $sigmoid(x)=\frac{1}{1+e^{-x}}$, or $tanh(x)$,
-or ReLU function $ReLU(x)=max(0,x)$\cite{nair2010rectified}.
+or ReLU function $ReLU(x)=\max(0,x)$\cite{nair2010rectified}.
 In addition,
-a different form of activation function, $maxout(x)=max_{i=1}^N(w_ix_i)$,
+a different form of activation function, $maxout(x)=\max_{i=1}^N(w_ix_i)$,
 is being used in CNNs recently\cite{goodfellow2013maxout}.
 However, these activation functions are all neuron-based, and simply suppose
 that each connection acts as simple as a linear function, $o(x_i)=w_ix_i$,
 in which, $w_i$ is a float number without even a bound. While in biological
 neural system, synapses, mimicked by artificial connections, are not really
-behaving linearly. In synapses, signals are transformed from electrical form
+behaving linearly.
+
+\subsection{Nonlinear Computation Model for Connections}
+Inspired by biological neuron synapses\cite{hall1905textbook,
+bayliss1908reciprocal,gerard1941interaction}, we propose a new computation
+model for connections between neurons.
+In synapses, signals are transformed from electrical form
 to chemical one, and transferred by some proteins to a connected neuron,
 then again, transformed back to electrical form to inhibit or activate
 the connected neuron\cite{gray1959axo,harvey2007locally}. In this process,
 signals can be amplified or reduced, but not in a linear way. Futhermore,
 signal strengths have lower and upper bounds which differs from the denotation
-of connections in CNNs. Thus we propose a new model for artificial neurons and
-their connections. Suppose, there're 3 neurons, $\mathcal{N}_a$,$\mathcal{N}_b$,
+of connections in CNNs.
+
+Suppose, there're 3 neurons, $\mathcal{N}_a$,$\mathcal{N}_b$,
 $\mathcal{N}_c$, and 2 connections, $\mathcal{C}_{a\rightarrow c}$,
 $\mathcal{C}_{b\rightarrow c}$, the graph is shown in figure
 (\ref{fig:neurons}).
@@ -455,7 +461,7 @@ $\mathcal{C}_{b\rightarrow c}$, the graph is shown in figure
 \begin{figure}
 \centering
 \includegraphics[height=24mm]{paper_res/conn.png}
-\caption{Neurons and Connections}
+\caption{A Net with Nonlinear Connections}
 \label{fig:neurons}
 \end{figure}
 
@@ -469,7 +475,7 @@ transferring functions are described as equation
 is guaranteed.
 For excitatory connections,
 \begin{equation}
-    g^{+}(x)=min\left(max\left(0,\frac{x-\alpha}{1-\alpha}\right),1\right)
+    g^{+}(x)=\min\left(\max\left(0,\frac{x-\alpha}{1-\alpha}\right),1\right)
     \label{eq:excitatory-transfer}
 \end{equation}
 
@@ -501,7 +507,7 @@ look like figure (\ref{fig:activation}).
 \end{figure}
 
 For a $M$-layer neural network, The forward-computaton equation for the
-$k$th neuron on $(p+1)\text{th}(p=1,2,\cdots,M)$ layer,
+$k^{\text{th}}$ neuron on $(p+1)^{\text{th}}(p=1,2,\cdots,M)$ layer,
 $\mathcal{N}_{p_k}$, with the input layer denoted as the first layer, is
 
 \begin{equation}
@@ -510,10 +516,10 @@ $\mathcal{N}_{p_k}$, with the input layer denoted as the first layer, is
 \end{equation}
 
 In which, $g_{i\rightarrow{k}}$ is the signal transferring function from
-$i$th neuron in $p$th layer to $k$th neuron
-in $(p+1)$th layer,
-and $o_{p_i}$ is the activation value of the $i$th neuron on
-$p$th layer.
+$i^{\text{th}}$ neuron in $p^{\text{th}}$ layer to $k^{\text{th}}$ neuron
+in $(p+1)^{\text{th}}$ layer,
+and $o_{p_i}$ is the activation value of the $i^{\text{th}}$ neuron on
+$p^{\text{th}}$ layer.
 
 For network in figure (\ref{fig:neurons}), we let $o_a$, $o_b$ and $o_c$
 denote the activation strengths of neuron $\mathcal{N}_a$, $\mathcal{N}_b$
@@ -528,6 +534,7 @@ Then we will have:
     \label{eq:forward-example}
 \end{equation}
 
+\subsection{Error Backpropagation For Nonlinear Connections}
 While, since the equations for connections and activation function
 of neurons in our model are not really differentiable, the famous
 backprop algorithm cannot be applied in the training section. Thus,
@@ -541,7 +548,7 @@ $\xi\in(0,1)$ and $\eta\in(0,1)$. Let
 $x=\sum_{i=1}^{N_p}g_{i\rightarrow{k}}(o_{p_i})$, $y=\sigma(x)$, and the given
 feedback error for current neuron $\mathcal{N}_{p_k}$ is $\Delta y$.
 Similarly, the feedback error for $x$ is $\Delta x$. In case parameter $\alpha$
-goes to 1 and fails our equations, we propose a upper-bound $\alpha_{max}$, which
+goes to 1 and fails our equations, we propose a upper-bound $\alpha_{\max}$, which
 is very close to 1 but less than 1.
 Thus, the parameter updatng rules are,
 
@@ -558,8 +565,8 @@ Thus, the parameter updatng rules are,
 \begin{equation}
 \Delta{\alpha} =\xi\cdot\left\{
     \begin{aligned}
-        &\left(max\left(0,\hat{\alpha}\right)-\alpha\right),&\Delta{y}>0\\
-        &\left(min\left(\alpha_{max}, \hat{\alpha}\right)-\alpha\right),&\Delta{y}<0\\
+        &\left(\max\left(0,\hat{\alpha}\right)-\alpha\right),&\Delta{y}>0\\
+        &\left(\min\left(\alpha_{\max}, \hat{\alpha}\right)-\alpha\right),&\Delta{y}<0\\
     \end{aligned}
     \right.
 \label{eq:delta-alpha}
@@ -590,7 +597,7 @@ will get,
 \end{equation}
 
 Let $\alpha_{p_{i\rightarrow{k}}}$ be the parameter of the connection from the
-$i$th neuron in $p$th layer to the $k$th neuron in ($p+1$)th layer.
+$i^{\text{th}}$ neuron in $p^{\text{th}}$ layer to the $k^{\text{th}}$ neuron in $(p+1)^{\text{th}}$ layer.
 Using equation (\ref{eq:delta-alpha}), we can update the parameters of connections.
 For excitatory connections,
 
@@ -605,9 +612,9 @@ For excitatory connections,
     \Delta\alpha_{p_{i\rightarrow{k}}} =\xi\cdot
     \left\{
         \begin{aligned}
-            &max\left(0,\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
+            &\max\left(0,\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
             &\quad\quad\Delta x_{p+1_{i\rightarrow{k}}}>0\\
-            &min\left(\alpha_{max},\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
+            &\min\left(\alpha_{\max},\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
             &\quad\quad\Delta x_{p+1_{i\rightarrow{k}}}<0\\
         \end{aligned}
         \right.
@@ -631,9 +638,9 @@ and (\ref{eq:conn-update-pos}),
     \Delta\alpha_{p_{i\rightarrow{k}}} =\xi\cdot
     \left\{
         \begin{aligned}
-            &min\left(\alpha_{max},\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
+            &\min\left(\alpha_{\max},\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
             &\quad\quad\Delta x_{p+1_{i\rightarrow{k}}}>0\\
-            &max\left(0,\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
+            &\max\left(0,\hat{\alpha}_{p_{i\rightarrow{k}}}\right)-\alpha_{p_{i\rightarrow{k}}},\\
             &\quad\quad\Delta x_{p+1_{i\rightarrow{k}}}<0\\
         \end{aligned}
         \right.
@@ -645,23 +652,22 @@ inhibitory\cite{ganguly2001gaba}. In our model, we propose
 a training strategy which allows connections switch between
 excitatory and inhibitory during training process.
 
-We propose a valve $\tau\in(0,\alpha_{max})$, which is very close to 0 but greater
+We propose a valve $\tau\in(0,\alpha_{\max})$, which is very close to 0 but greater
 than 0, if $g_{p_{i\rightarrow{k}}}=g^{+}$, $\Delta x_{p+1_{i\rightarrow{k}}}<0$
-and $\alpha_{p_{i\rightarrow{k}}}+\Delta\alpha_{p_{i\rightarrow{k}}}-\alpha_{max}<\tau$,
+and $\alpha_{p_{i\rightarrow{k}}}+\Delta\alpha_{p_{i\rightarrow{k}}}-\alpha_{\max}<\tau$,
 then for connection $\mathcal{C}_{p_{i\rightarrow{k}}}$, let $g_{p_{i\rightarrow{k}}}=g^{-}$, this update will
 switch connections from excitatory to inhibitory.
 Similarly, if $g_{p_{i\rightarrow{k}}}=g^{-}$, $\Delta x_{p+1_{i\rightarrow{k}}}>0$
-and $\alpha_{p_{i\rightarrow{k}}}+\Delta\alpha_{p_{i\rightarrow{k}}}-\alpha_{max}<\tau$,
+and $\alpha_{p_{i\rightarrow{k}}}+\Delta\alpha_{p_{i\rightarrow{k}}}-\alpha_{\max}<\tau$,
 then for connection $\mathcal{C}_{p_{i\rightarrow{k}}}$, let $g_{p_{i\rightarrow{k}}}=g^{+}$, this update will
 switch connections from inhibitory to excitatory.
 
 
 
-
 So far we've derivated the equations for updating parameters of neurons
-in $(p+1)$th layer and the parameters of connections from $p$th layer to
-$(p+1)$th layer. With equation (\ref{eq:delta-x-real}),(\ref{eq:conn-error})
-and (\ref{eq:delta-x}), we calculate the error of the output in the $p$th layer,
+in $(p+1)^{\text{th}}$ layer and the parameters of connections from $p^{\text{th}}$ layer to
+$(p+1)^{\text{th}}$ layer. With equation (\ref{eq:delta-x-real}),(\ref{eq:conn-error})
+and (\ref{eq:delta-x}), we calculate the error of the output in the $p^{\text{th}}$ layer.
 Let $\Delta o_{p_{i\rightarrow{k}}}$ be the correction for $\mathcal{N}_{p_i}$
 contributed by connection $\mathcal{C}_{p_{i\rightarrow{k}}}$,
 for excitatory connections,
@@ -690,82 +696,244 @@ Then the totol correction for the output of neuron $\mathcal{N}_{p_i}$ is,
 
 
 
+\section{Lateral Inhibition Nets}
+\subsection{The Theory of Lateral Inhibition}
+Biologically, the excitation process of neurons are inhibited by nearby excited
+neurons, so called \emph{Lateral Inhibition}
+\cite{amari1977dynamics,blakemore1972lateral,blakemore1970lateral}.
+Researches proved that the lateral inhibition play a big role in forming patterns
+in neural dynamics\cite{amari1977dynamics}.
+We propose an similar mechanism in artificial neural networks, and expect to
+achieve better presentation of feature map.
 
+Let $\dot{\Upsilon}$ be the set of all nearby neurons, i.e., the neighbors of a
+neuron $\mathcal{N}_0$, and $\Upsilon = \dot{\Upsilon} \cup \{\mathcal{N}_0\}$.
+For general argument, if the neuron $\mathcal{N}_0$ is at position $(x,y)$
+in the $i^{\text{th}}$ feature map of $p^{\text{th}}$ layer in a convolutional
+neural network. Let $r\in\mathbf{N}^{+}$ be the radius of neighborhood, the center
+point is $(x_0,y_0)$, thus region defined by $(x_0,y_0)\odot{r}$ is the neighborhood, and every neuron
+that is away from $\mathcal{N}_0$ by an Manhattan distance within $r$ is counted in $\Upsilon$.
+that is, $\Upsilon=\{\mathcal{N}_{(x,y)}\mid|x-x_0|+|y-y_0|\le r\}$, then the
+lateral inhibition phase is described with equation (\ref{eq:lateral-inhibition}).
 
-\section{Competition Between Filters: Filter Alienation within Same Layer}
-For filters in the same layer, to reduce replication and extract features
-from an image as many as possible, filter alienation is essential. Thus we
-propose a pretraining algorithm for filter initialization.
-Let $\mathcal{F}_{p_k}$ denote the $k$th filter in layer of
-depth $p$, and $o_{p_k}$ be its activation value.
-Firstly, we initiliazed the $p$th layer with $N_p$ filters,
-for which we set the connection parameters
-$\left<\alpha_{p_{k_1}},\alpha_{p_{k_2}},\cdots,\alpha_{p_{k_{N_p}}}\right>$
-randomized as strictly different value.
-
-
-
-
-
-
-\section{Competition Between Receptive Fields: Highlighting Local Features}
-some text here...
-
-
-
-
-
-
-
-\section{Overall Neural Network Model}
-some text here...
-
-
-
-
-
-\section{Image Compression based on Color Clustering}
-Using basic pixel color filters
-$$\left\{{\delta}_i(r,g,b)= \vec{w_i}\cdot(r,g,b)|i\in{[1,M]}\right\}$$
-$M$ is the number of color filters for images.
-
-
-
-
-\section{Train Filters Layer By Layer}
-Object Detection Filters
-$$\left\{\xi_i(\mathcal{F}_k) | i\in\left[1,N_k\right] \right\}$$
-$\mathcal{F}_k$ is the $k$th receptive field on last CNN pooling layer.
-$N_k$ is the number of filters for Object Detecton Filters, which refers to
-layers from the second in CNNs.
-\\
-Due to huge computation duplicate, applying sampling methods:
-Randomly select an image from database, and randomly select a field,
-with coordinates as $(x,y)$ while keeping width and height as constant.
-The width and height is determined by filters.
-Use this piece as input to train fileters layer by layer unsupervisedly.
-
-
-\section{Data-driven sparse Connections}
-As showed in the previous chapter, we train filters layer by layer,
-Generally, if we are now at $p\text{th}(p\ge2)$ layers, we have trained all
-$q\text{th}(q<p)$ layers.\\
-  Inspired by biological brain, we apply Lateral Depression model to the unsupervised
-training.\\
-Given a coefficient $\beta$ as minimum gap between activation of nodes.
-If there exists one node $\mathcal{N}_{s_0}$ ($\mathcal{N}_{s_i}$ is the $i$th node
-in $s$th layer), whose activation for current input is higher than its neighbors $\mathcal{U}_{s_0}$
-(the neighbors, determined by some neighbor definition) nodes by at least $\beta$.
 \begin{equation}
-\mathcal{N}_{s_i} =\left\{
+    o'_{\mathcal{N}_0}=\frac{o_{\mathcal{N}_0}}{\max(1, \sum_{\mathcal{N}_i\in\Upsilon}o_{\mathcal{N}_i})}
+    \label{eq:lateral-inhibition}
+\end{equation}
+
+In equation (\ref{eq:lateral-inhibition}), $o_{\mathcal{N}_0}$ is the activation
+value of neuron $\mathcal{N}_0$, and $o'_{\mathcal{N}_0}$ is the real activation
+value after the lateral inhibition phase.
+As the forward computing flow is changed with this additional phase, the error
+backprop equations need to be updated, as in equation (\ref{eq:lateral-inhibition-backprop}).
+
+\begin{multline}
+    \Delta{o_{\mathcal{N}_0}} = ({o'}_{\mathcal{N}_0}+\Delta{o'}_{\mathcal{N}_0})\cdot
+        \max(1, \sum_{\mathcal{N}_i\in\Upsilon}o_{\mathcal{N}_i} + \Delta{o'}_{\mathcal{N}_0})\\
+    -{o'}_{\mathcal{N}_0}\cdot\max(1,\sum_{\mathcal{N}_i\in\Upsilon}o_{\mathcal{N}_i})
+    \label{eq:lateral-inhibition-backprop}
+\end{multline}
+
+\subsection{A Visualized Instance of Lateral Inhibition}
+To visualize how lateral inhibition can improve the presentation of feature maps
+from original images, we propose a simple filter which only extracts perceived
+luminance distribution of an image, denoted as $\mathcal{F}(\cdot)=(0.299,0.587,0.114)\cdot(r,g,b)$.
+Such a filter has a size of receptive field as $1\times1$. We conduct this experiment
+under \emph{Jupyter Notebook} (thanks to all supporters of this amazing staff), and
+the image to test (see Fig-\ref{fig:lateral-inhibition-test-original})
+is randomly chosen from Web (no offence to the president of the U.S.).
+
+\begin{figure*}[!t]
+\centering
+\subfloat[The Original]{\includegraphics[width=1.5in]{paper_res/trump.png}
+\label{fig:lateral-inhibition-test-original}}
+\hfil
+\subfloat[Luminance Filter]{\includegraphics[width=1.5in]{paper_res/trump-filtered.png}
+\label{fig:lateral-inhibition-test-filtered}}
+\hfil
+\subfloat[Lateral Inhibition]{\includegraphics[width=1.5in]{paper_res/trump-lateral-inhibition.png}
+\label{fig:lateral-inhibition-test-lateral-inhibition}}
+\hfil
+\subfloat[Binarization]{\includegraphics[width=1.5in]{paper_res/trump-binarization.png}
+\label{fig:lateral-inhibition-test-binarization}}
+\caption{Lateral Inhibition Visualization}
+\label{fig:lateral-inhibition-test}
+\end{figure*}
+
+Using the Luminance Filter $\mathcal{F}$, we get Fig-\ref{fig:lateral-inhibition-test-filtered},
+which is generally considered as a grayscale image from the original.
+In conventional neural nets, such a feature map generated by this filter is
+connected directly to a sub-sampling or fully-connected layer, the connection volume
+and computation cost thereby are considerable, and often lead to overfitting\cite{goodfellow2013maxout}.
+To overcome this, we append lateral inhibition phase immediately to each of convolution layer
+before the computation process enters into next layer, expecting to make a relatively more sparse net.
+The result for current case is shown as Fig-\ref{fig:lateral-inhibition-test-lateral-inhibition}.
+The darker part of image is what is expected to extract. As we see, the lateral inhibition
+phase performs similarly to a differential calculus of images, but with more global features
+(such as luminance) remained. Let's see how this works, suppose a part of single channel image
+is denoted as a float matrix $\mathbf{M}$,
+
+\begin{equation}
+\mathbf{M} = \left\{
 \begin{aligned}
-1,&\quad \text{if }\sigma\left(\vec{w_{s_i}}\cdot\vec{x}\right) -
-\sigma\left(\vec{w_{s_j}}\cdot\vec{x}\right) \ge \beta
-(\text{for any }j\in \mathcal{U}_{s_i})  \\
-0,&\quad \text{otherwise}\\
+    0.1\quad0.0\quad0.1\quad0.9\quad0.9\quad0.9\\
+    0.0\quad\mathbf{0.4}\quad0.0\quad0.9\quad\mathbf{0.9}\quad0.9\\
+    0.1\quad0.0\quad0.1\quad0.9\quad0.9\quad0.9\\
+\end{aligned}
+\right\}
+\notag
+\end{equation}
+
+Notice that only the emphasized part of matrix $\mathbf{M}$ is under observation.
+Let the lateral inhibition phase be $\Omega(r)$ in which $r$ is the only parameter
+for the definition of neighborhood $\Upsilon$, according to equation (\ref{eq:lateral-inhibition}),
+
+\begin{multline}
+\mathbf{M'}=\mathbf{M}\otimes\Omega(r=1) = \\
+\left\{
+\begin{aligned}
+    0.1\quad    0.0\quad            0.1\quad    0.32\quad    0.25\quad          0.33\\
+    0.0\quad    \mathbf{0.4}\quad   0.0\quad    0.25\quad    \mathbf{0.2}\quad  0.33\\
+    0.1\quad    0.0\quad            0.1\quad    0.32\quad    0.25\quad          0.33\\
+\end{aligned}
+\right\}
+\notag
+\end{multline}
+
+Before lateral inhibition phase, the left half of $\mathbf{M}$ is a 'darker' place
+(the smaller, the darker),
+compared to its right one. While, after $\Omega(r=1)$ is applied, the left half
+remained unchanged, and the right half of $\mathbf{M'}$ is obviously suppressed,
+and the right observed identity becomes surprisingly far smaller than the left.
+While, we can see that the left half of the matrix still remained 'darker' than the right half,
+which means lateral inhibition can keep the global features from images, and
+highlights local features at the same time.
+
+\section{Binarization of Feature Map}
+\subsection{Feature Map Visualization}
+Although the feature map drawn by the luminance filter is clearly visualized and understood
+in last section, filters can be arbitrary and ambiguous in neural networks like CNNs,
+and it thereby becomes difficult or even impossible to understand what kind of features those
+filters really extract from the images.
+However, if the lateral inhibition phase is employed,
+we may obtain a better understanding and visualization of the feature maps, since we do not need
+to care what the feature map really means, but just to know what differences are presented
+among local regions of feature maps, as those differences are what truly determine which class
+the input image is related to.
+
+On the other hand, conventional visualization of feature maps simply
+colorize those feature activation matrix into pactchs of image, and an average man may not get any useful information
+to understand how convolutional networks work, or if they are working in a way as expected.
+Recently a category of deconvolutional network is proposed to visualize the feature maps, and it seems
+working well\cite{zeiler2014visualizing}. However, the method is literally too
+complicated and requires much more computation, which we may not expect.
+
+Therefore, we propose \emph{feature map binarization} to help visualize and diagnose each feature layer of CNNs
+at literally no cost (the visualization is straightly one snapshot of the layer without any more
+procedure as you will see).
+
+For any type of layer at depth $p$, consisting of $N_p$ filter(s)
+(actually, we may view a fully connected layer as a convolutional layer with only
+single filter of which the receptive field is maximumized as the same size of last layer),
+we get $N_p$ feature map(s).
+For each feature map, $\Phi_{p_i},i=1,2,3,\cdots,N_p$, let $o_{p_{i_j}}'$ be the
+$j^{\text{th}}$ element in map $\Phi_{p_i}'$, which is a state of $\Phi_{p_i}$ following lateral inhibition phase,
+and $\dot{\Upsilon}_{p_{i_j}}$ be its neighborhood (the definition of neighborhood
+preserves the same as that in lateral inhibition phase, while the parameter $r$ may be set alone),
+we apply such procedure to binarize feature map $\Phi_{p_{i_j}}'$,
+
+\begin{equation}
+    \Xi_{p_{i_j}} = \{{o_{p_{i_k}}'}\mid{o_{p_{i_j}}'}-{o_{p_{i_k}}'}>\beta,o_{p_{i_k}}'\in\dot{\Upsilon}_{p_{i_j}} \}
+    \label{eq:binarization-1}
+\end{equation}
+
+\begin{equation}
+o_{p_{i_j}}'' =\left\{
+\begin{aligned}
+    1.0,\quad& \frac{\text{count}(\Xi_{p_{i_j}})}{\text{count}(\dot{\Upsilon}_{p_{i_j}})}\ge\theta \\
+    0.0,\quad& \text{otherwise}\\
 \end{aligned}
 \right.
+\label{eq:binarization-2}
 \end{equation}
+
+In equation (\ref{eq:binarization-1})(\ref{eq:binarization-2}), $\beta\in[0,+\infty]$ is the minimum gap
+of activation proposed between any element in neighborhood $\dot{\Upsilon}_{p_{i_j}}$ and the interested one $o_{p_{i_j}}$,
+and $\theta\in[0,1]$ is the lowerbound of the ratio of satisfied neighbors by the filter of minimum gap of activation.
+Such that the binarization of feature maps is determined and only, on parameters $\left<r,\beta,\theta\right>$.
+
+According to equation (\ref{eq:binarization-1}) and (\ref{eq:binarization-2}), we append our binarization phase
+into the whole computing flow following the lateral inhibition phase. Thus we get Fig-\ref{fig:lateral-inhibition-test-binarization}
+as the binarization result of the feature map, for which we take $\left<r,\beta,\theta\right>=\left<5,0.0,0.85\right>$.
+From Fig-\ref{fig:lateral-inhibition-test-binarization}, we can clearly see what the luminance filter really extracts
+from the original image, and basically how well it behaves.
+
+\subsection{Input Determined Sparsity}
+In fact, we may present the computing flow for each filter as the transformations of its feature map,
+$$\mathbf{X}\longmapsto\cdots\longmapsto\Phi_{p_i}\overset{\Omega(r)}{\longmapsto}\Phi_{p_i}'\overset{\Psi(r,\beta,\theta)}{\longmapsto}\Phi_{p_i}''$$,
+with $\Psi$ defined as the binarization phase. We take $\Phi_{p_i}'$ as the final state of feature map generated by
+filter $\mathcal{F}_{p_i}$, and $\Phi_{p_i}''$ is the mask of its sparsity.
+Obviously, $\Phi_{p_i}''$ is determined by its input $\mathbf{X}$, which may be an original image.
+For each different input of a net, the sparsity mask may vary, and this is different from the Dropout\cite{hinton2012improving}
+and Dropconnect\cite{wan2013regularization} regularization, which randomly reduce nodes or connections to train submodels of a net.
+
+
+\section{Filter Polarization}
+In conventional CNNs, due to huge volume of connections and sometimes insufficient training
+data (big data though, not big enough yet), the redundancy of filters leads to model
+overfitting and difficulty in training\cite{jaderberg2014speeding,chen2015compressing}.
+Thus we propose a method called filter polarization,
+it generates and pretrains those filters layer by layer, dynamically
+determines the number of filters for each layer, and produces more polarized filters,
+aiming to reduce the filter redundancy of nets and speed up global training.
+
+Filter polarization algorithm contains three phase, they are executed in distinct order,
+and the whole flow of three phases will iterate itself till some condition meets.
+
+\subsection{Filter Generation}
+
+
+
+
+\subsection{Filter Pretraining}
+
+
+
+\subsection{Filter Redundancy Check}
+
+
+Let $\mathcal{F}_{p_k}$ denote the $k^{\text{th}}$ filter in layer of
+depth $p$, and $o_{p_k}$ be its activation value.
+Firstly, we initiliazed the $p^{\text{th}}$ layer with $N_p$ filters,
+for which we set the connection parameters
+$\left<\alpha_{p_{k_1}},\alpha_{p_{k_2}},\cdots,\alpha_{p_{k_{N_p}}}\right>$
+randomized as strictly different values.
+
+
+
+
+\section{Imperical Study}
+We propose a net model to achieve automatic image recognition, and it is tested
+on a set of popular benchmarks.
+
+On MNIST datasets, with no convolutional layers, we've achieved accuracy and
+minimum training cost.
+
+------------- CHART HERE -------------
+
+On CIFAR-10 benchmark, we use convolutional layers to reduce parameter volume
+and enhence model robustness. Our model performs well too.
+
+
+------------ CHART HERE --------------
+
+
+For small sample volume datasets like CIFAR-100 benmark, our model also outperforms
+most state-of-the-art ones.
+
+
+------------ CHART HERE --------------
+
 
 
 % An example of a floating figure using the graphicx package.
@@ -1059,6 +1227,46 @@ K.~Ganguly, A.~F. Schinder, S.~T. Wong, and M.-m. Poo, ``Gaba itself promotes
 the developmental switch of neuronal gabaergic responses from excitation to
 inhibition,'' \emph{Cell}, vol. 105, no.~4, pp. 521--532, 2001.
 
+\bibitem{amari1977dynamics}
+S.-i. Amari, ``Dynamics of pattern formation in lateral-inhibition type neural
+  fields,'' \emph{Biological cybernetics}, vol.~27, no.~2, pp. 77--87, 1977.
+
+\bibitem{blakemore1972lateral}
+C.~Blakemore and E.~A. Tobin, ``Lateral inhibition between orientation
+detectors in the cat's visual cortex,'' \emph{Experimental Brain Research},
+vol.~15, no.~4, pp. 439--440, 1972.
+
+\bibitem{blakemore1970lateral}
+C.~Blakemore, R.~H. Carpenter, and M.~A. Georgeson, ``Lateral inhibition
+between orientation detectors in the human visual system.'' \emph{Nature},
+1970.
+
+\bibitem{jaderberg2014speeding}
+M.~Jaderberg, A.~Vedaldi, and A.~Zisserman, ``Speeding up convolutional neural
+networks with low rank expansions,'' \emph{arXiv preprint arXiv:1405.3866},
+2014.
+
+\bibitem{chen2015compressing}
+W.~Chen, J.~T. Wilson, S.~Tyree, K.~Q. Weinberger, and Y.~Chen, ``Compressing
+convolutional neural networks,'' \emph{arXiv preprint arXiv:1506.04449},
+2015.
+
+\bibitem{masci2011stacked}
+J.~Masci, U.~Meier, D.~Cire{\c{s}}an, and J.~Schmidhuber, ``Stacked
+convolutional auto-encoders for hierarchical feature extraction,''
+\emph{Artificial Neural Networks and Machine Learning--ICANN 2011}, pp.
+52--59, 2011.
+
+\bibitem{hinton2012improving}
+G.~E. Hinton, N.~Srivastava, A.~Krizhevsky, I.~Sutskever, and R.~R.
+Salakhutdinov, ``Improving neural networks by preventing co-adaptation of
+feature detectors,'' \emph{arXiv preprint arXiv:1207.0580}, 2012.
+
+\bibitem{wan2013regularization}
+L.~Wan, M.~Zeiler, S.~Zhang, Y.~L. Cun, and R.~Fergus, ``Regularization of
+neural networks using dropconnect,'' in \emph{Proceedings of the 30th
+International Conference on Machine Learning (ICML-13)}, 2013, pp.
+1058--1066.
 
 \end{thebibliography}
 
