@@ -190,4 +190,16 @@ L.~Wan, M.~Zeiler, S.~Zhang, Y.~L. Cun, and R.~Fergus, ``Regularization of
   International Conference on Machine Learning (ICML-13)}, 2013, pp.
   1058--1066.
 
+\bibitem{dalal2005histograms}
+N.~Dalal and B.~Triggs, ``Histograms of oriented gradients for human
+  detection,'' in \emph{Computer Vision and Pattern Recognition, 2005. CVPR
+  2005. IEEE Computer Society Conference on}, vol.~1.\hskip 1em plus 0.5em
+  minus 0.4em\relax IEEE, 2005, pp. 886--893.
+
+\bibitem{girshick2014rich}
+R.~Girshick, J.~Donahue, T.~Darrell, and J.~Malik, ``Rich feature hierarchies
+  for accurate object detection and semantic segmentation,'' in
+  \emph{Proceedings of the IEEE conference on computer vision and pattern
+  recognition}, 2014, pp. 580--587.
+
 \end{thebibliography}
