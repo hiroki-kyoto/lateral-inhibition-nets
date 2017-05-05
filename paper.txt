@@ -1,2 +1,0 @@
-1. ALNN （upscale+som）
-2. 知识迁移(作为尝试)

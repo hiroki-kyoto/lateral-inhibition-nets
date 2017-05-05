@@ -882,7 +882,7 @@ filter $\mathcal{F}_{p_i}$, and $\Phi_{p_i}''$ is the mask of its sparsity.
 Obviously, $\Phi_{p_i}''$ is determined by its input $\mathbf{X}$, which may be an original image.
 For each different input of a net, the sparsity mask may vary,
 and this is different from the Dropout\cite{hinton2012improving}
-and Dropconnect\cite{wan2013regularization} regularization, which randomly
+and Dropconnect\cite{wan2013regularization} regularizations, which randomly
 reduce nodes or connections in a training iteration to train submodels of a net,
 and consequently leading to literally twice the time cost on training\cite{hinton2012improving}.
 
@@ -891,7 +891,7 @@ subset of the net model. As the feature map binarization phase indicates, it hig
 the receptive fields which have stronger responses to the input patterns,
 and inhibites the others. This functionality is similarly to that of
 \emph{Non-maximum suppression, NMS}\cite{dalal2005histograms}, which works well
-in RCNNs and Mask-RCNNs\cite{girshick2014rich} to get best position proposals of
+in R-CNNs and Mask R-CNNs\cite{girshick2014rich} to get best position proposals of
 objects in images. While the difference is the binarization phase in our model
 does not reduce those non-maximum nodes, but keeps the majority features with
 far less nodes. Thus the net made sparse with binarization phase is neither a submodel
