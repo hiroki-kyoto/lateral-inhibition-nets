@@ -1,0 +1,14 @@
+*
+!*.tex
+!*.bib
+!*.bbl
+!*.pdf
+!*.py
+!*.c
+!*.cpp
+!*.h
+!*.md
+!*.ipynb
+!.gitignore
+!paper_res/
+!clin/
