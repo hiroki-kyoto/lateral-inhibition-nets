@@ -76,7 +76,7 @@ def applyConvolutionFilters(filters, feature_maps):
     return new_maps
 def applyLateralInhibition(feature_maps, radius):
     return 0
-    #for i in range(feature_maps.shape[0]):   
+    #for i in range(feature_maps.shape[0]):
 #################### TEST O CIFAR-10 ################
 cifar_10_data = getCIFAR10('1')
 im = np.zeros([8,32,32,3])

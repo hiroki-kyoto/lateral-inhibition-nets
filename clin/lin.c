@@ -1,13 +1,10 @@
 #include <stdio.h>
+#include "lib_read_dataset.h"
 
-int incep (
-	float * new_maps,
-	float * maps, 
-	float * filters,
-	int map_x,
-	int map_y,
-	int map_count,
-	int filter_count
-) {
-	return 12345;
+int main()
+{
+	dataset * ds = alloc_cifar_10_dataset();
+	read_cifar_10_bacth(ds, 1);
+	fprintf(stdout, "OK.\n");
+	return 0;
 }

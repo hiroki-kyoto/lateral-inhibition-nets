@@ -9,6 +9,7 @@
 !*.h
 !*.md
 !*.ipynb
+!makefile
 !.gitignore
 !paper_res/
 !clin/
