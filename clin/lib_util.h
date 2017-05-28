@@ -202,7 +202,7 @@ void free_group(group * g){
     free(g);
 }
 
-void alloc_filter(){
+filter * alloc_filter(){
     return (filter*)malloc(sizeof(filter));
 }
 
