@@ -219,4 +219,9 @@ void get_filter(filter * f, group * g, int id){
     f->p = g->p + (id*(g->w*g->h+1));
 }
 
+// python interation
+void print_filter(filter * f){
+    fprintf(stdout, "%d,%d");
+}
+
 #endif

@@ -29,15 +29,20 @@ int main()
 	layer * tl; // tmp layer
 	layer * ol; // output
 	group * g1; // first filter group
+	g1 = alloc_group(8, 2, 2);
 	group_rand(g1, 0.0, 1.0);
 	il = alloc_layer(cifar_10_train->d, cifar_10_train->h, cifar_10_train->w);
+	
 	tl = alloc_next_layer_with_conv(il, g1);
-	ol = alloc_same_size_layer(ol);
-	conv_valid(ol, il, g1);
+	ol = alloc_same_size_layer(tl);
+	conv_valid(tl, il, g1);
 	act(ol, tl, ACT_RLU);
 
 	// free layers
 	free_layer(il);
+	free_layer(tl);
+	free_layer(ol);
+	free_group(g1);
 	// free datasets
 	free_dataset(cifar_10_train);
 	free_dataset(cifar_10_test);
