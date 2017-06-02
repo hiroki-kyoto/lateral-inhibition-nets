@@ -8,6 +8,8 @@
 !*.cpp
 !*.h
 !*.md
+!*.log
+!*.sh
 !*.ipynb
 !makefile
 !.gitignore

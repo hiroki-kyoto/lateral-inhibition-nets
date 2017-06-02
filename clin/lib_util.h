@@ -218,9 +218,9 @@ group * alloc_group_with_filter(int n, filter * f){
 
 void group_rand(group * g, float min, float max){
     int i, n;
-    n = (g->w*g->h*+1)*g->n;
+    n = (g->w*g->h+1)*g->n;
     for(i=0;i<n;++i){
-        g->p[i] = min + (max-min)*(rand()%RAND_MAX);
+        g->p[i] = min + (max-min)*rand()/RAND_MAX;
     }
 }
 
@@ -345,6 +345,24 @@ layer * alloc_extended_layer_with_lainer(layer * l, lainer * la){
     return el;
 }
 
+layer * alloc_input_layer(dataset * ds){
+    return alloc_layer(ds->d, ds->h, ds->w);
+}
+
+void load_input(layer * il, image * im){
+    int i, j, k;
+    ASSERT(il->d==im->d);
+    ASSERT(il->h==im->h);
+    ASSERT(il->w==im->w);
+    for(i=0; i<im->d; ++i){
+        for(j=0; j<im->h; ++j){
+            for(k=0; k<im->w; ++k){
+                il->p[i*il->h*il->w+j*il->w+k] =
+                im->p[i*il->h*il->w+j*il->w+k];
+            }
+        }
+    }
+}
 
 // python interation
 // filter weight retrive
@@ -384,11 +402,11 @@ void print_filter(filter * f){
     fprintf(stdout, "[h,w]=[%d,%d]\n", f->h, f->w );
     for(i=0; i<f->h; ++i){
         for(k=0; k<f->w; ++k){
-            fprintf(stdout, "%9.3f", f_w_r(f, k, i));
+            fprintf(stdout, "%9.3f\t", f_w_r(f, k, i));
         }
         fprintf(stdout, "\n");
     }
-    fprintf(stdout, "%9.3f\n", f_b_r(f));
+    fprintf(stdout, "%9.3f\t\n", f_b_r(f));
 }
 
 void print_group(group * g){
@@ -408,7 +426,7 @@ void print_map(map * m){
     fprintf(stdout, "[h,w]=[%d,%d]\n", m->h, m->w );
     for(i=0; i<m->h; ++i){
         for(k=0; k<m->w; ++k){
-            fprintf(stdout, "%9.3f", m_e_r(m, k, i));
+            fprintf(stdout, "%9.3f\t", m_e_r(m, k, i));
         }
         fprintf(stdout, "\n");
     }
