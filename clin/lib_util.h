@@ -28,7 +28,11 @@
         fprintf(stdout, "ERROR:@%s#%d\n", __FILE__, __LINE__);\
         exit(1);\
     }\
-}\
+}
+
+#define DOT(x){\
+    fprintf(stdout, "MSG@%s#%d:%s\n", __FILE__, __LINE__, x);\
+}
 
 typedef unsigned char byte;
 
@@ -83,6 +87,11 @@ typedef struct T_FILTER{
     int w;
     float * p; // weight vector and bias
 }filter;
+
+typedef struct T_LATERAL_INHIBITION{
+    int r; // radius for lateral inhibition
+    filter * f; // the filter specifed for lateral inhibition process
+}lainer;
 
 // memory allocated alone
 dataset * alloc_dataset(int n, int d, int h, int w){
@@ -189,6 +198,24 @@ group * alloc_group(int n, int h, int w){
     return g;
 }
 
+group * alloc_group_with_filter(int n, filter * f){
+    group * g;
+    int i;
+    g = (group*)malloc(sizeof(group));
+    g->n = n;
+    g->h = f->h;
+    g->w = f->w;
+    g->p = (float*)malloc(sizeof(float)*n*(g->w*g->h+1));
+    for(i=0; i<n; ++i){
+        memmove(
+            (char*)(g->p+(i*(g->w*g->h+1))),
+            (char*)(f->p),
+            sizeof(float)*(g->w*g->h+1)
+        );
+    }
+    return g;
+}
+
 void group_rand(group * g, float min, float max){
     int i, n;
     n = (g->w*g->h*+1)*g->n;
@@ -206,7 +233,20 @@ filter * alloc_filter(){
     return (filter*)malloc(sizeof(filter));
 }
 
+filter * alloc_filter_alone(int h, int w){
+    filter * f = (filter*)malloc(sizeof(filter));
+    f->h = h;
+    f->w = w;
+    f->p = (float*)malloc(sizeof(float)*(h*w+1));
+    return f;
+}
+
 void free_filter(filter * f){
+    free(f);
+}
+
+void free_filter_alone(filter * f){
+    free(f->p);
     free(f);
 }
 
@@ -219,9 +259,176 @@ void get_filter(filter * f, group * g, int id){
     f->p = g->p + (id*(g->w*g->h+1));
 }
 
+void make_lain_filter(filter * f, int r){
+    int i, k;
+    float s;
+    ASSERT(f!=NULL);
+    ASSERT(f->p!=NULL);
+    ASSERT(r>0);
+    ASSERT(f->w==2*r+1);
+    ASSERT(f->h==2*r+1);
+    s = 0.0;
+    f->p[r*f->w+r] = 1.0; // center weight
+    f->p[f->h*f->w] = 0.0; // bias set to be 0
+    for(i=-r; i<=r; ++i){
+        for(k=-r; k<=r; ++k){
+            if(i!=0 || k!=0){
+                s += 1.0/(i*i+k*k);
+            }
+        }
+    }
+    for(i=-r; i<=r; ++i){
+        for(k=-r; k<=r; ++k){
+            if(i!=0 || k!=0){
+                f->p[(i+r)*f->w+(k+r)] = -1.0/(i*i+k*k)/s;
+            }
+        }
+    }
+}
+
+// lateral inhibition layer
+lainer * alloc_lainer(int r){
+    lainer * la;
+    ASSERT(r>0);
+    la = (lainer*)malloc(sizeof(lainer));
+    la->r = r;
+    la->f = alloc_filter_alone(2*r+1, 2*r+1);
+    make_lain_filter(la->f, r);
+    return la;
+}
+
+void free_lainer(lainer * la){
+    free_filter(la->f);
+    free(la);
+}
+
+// extend layer to specifed size with zeros
+void extend_layer_with_zeros(
+    layer *nl,
+    layer * l,
+    int r
+){
+    int i, j, k;
+    ASSERT(r>0);
+    ASSERT(nl->w==l->w+2*r);
+    ASSERT(nl->h==l->h+2*r);
+    ASSERT(nl->d==l->d);
+    // fill zeros into surrounded region
+    for(i=0; i<nl->h; ++i){
+        for(j=0; j<nl->w; ++j){
+            // this part is easy to be paralleled in GPUs
+            if(i<r || i>l->h-1+r || j<r || j>l->w-1+r){
+                for(k=0; k<nl->d; ++k){
+                    nl->p[k*nl->w*nl->h + i*nl->w+j] = 0;
+                }
+            } else {
+                for(k=0; k<nl->d; ++k){
+                    nl->p[k*nl->w*nl->h + i*nl->w+j] =
+                    l->p[k*l->w*l->h + (i-r)*l->w + j-r];
+                }
+            }
+        }
+    }
+}
+
+layer * alloc_next_layer_with_conv(layer * l, group * g){
+    return alloc_layer(l->d*g->n, l->h-g->h+1, l->w-g->w+1);
+}
+
+layer * alloc_same_size_layer(layer * l){
+    return alloc_layer(l->d, l->h, l->w);
+}
+
+layer * alloc_extended_layer_with_lainer(layer * l, lainer * la){
+    layer * el;
+    el = alloc_layer(l->d, l->h+2*la->r, l->w+2*la->r);
+    return el;
+}
+
+
 // python interation
+// filter weight retrive
+float f_w_r(filter * f, int x, int y){ // get weight element at (x,y)
+    ASSERT(x<f->w);
+    ASSERT(y<f->h);
+    return f->p[y*f->w + x];
+}
+// filter weight set
+void f_w_s(filter * f, float w, int x, int y){
+    ASSERT(x<f->w);
+    ASSERT(y<f->h);
+    f->p[y*f->w + x] = w;
+}
+// filter bias retrive
+float f_b_r(filter * f){ // get bias for filter
+    return f->p[f->h*f->w];
+}
+// filter bias set
+void f_b_s(filter *f, float b){
+    f->p[f->h*f->w] = b;
+}
+// map element retrive
+float m_e_r(map * m, int x, int y){ // get element at (x,y)
+    ASSERT(x<m->w);
+    ASSERT(y<m->h);
+    return m->p[y*m->w + x];
+}
+float m_e_s(map * m, float e, int x, int y){
+    ASSERT(x<m->w);
+    ASSERT(y<m->h);
+    m->p[y*m->w + x] = e;
+}
+
 void print_filter(filter * f){
-    fprintf(stdout, "%d,%d");
+    int i, k;
+    fprintf(stdout, "[h,w]=[%d,%d]\n", f->h, f->w );
+    for(i=0; i<f->h; ++i){
+        for(k=0; k<f->w; ++k){
+            fprintf(stdout, "%9.3f", f_w_r(f, k, i));
+        }
+        fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "%9.3f\n", f_b_r(f));
+}
+
+void print_group(group * g){
+    int i;
+    filter * f;
+    f = alloc_filter();
+    fprintf(stdout, "[n,h,w]=[%d,%d,%d]\n", g->n, g->h, g->w);
+    for(i=0; i<g->n; ++i){
+        get_filter(f, g, i);
+        print_filter(f);
+    }
+    free_filter(f);
+}
+
+void print_map(map * m){
+    int i, k;
+    fprintf(stdout, "[h,w]=[%d,%d]\n", m->h, m->w );
+    for(i=0; i<m->h; ++i){
+        for(k=0; k<m->w; ++k){
+            fprintf(stdout, "%9.3f", m_e_r(m, k, i));
+        }
+        fprintf(stdout, "\n");
+    }
+}
+
+void print_layer(layer * l){
+    int i;
+    map * m;
+    fprintf(stdout, "[d,h,w]=[%d,%d,%d]\n", l->d, l->h, l->w);
+    m = alloc_map();
+    for(i=0; i<l->d; ++i){
+        get_map(m, l, i);
+        print_map(m);
+    }
+    free_map(m);
+}
+
+void print_lainer(lainer * la){
+    fprintf(stdout, "[r]=%d\n", la->r);
+    print_filter(la->f);
 }
 
 #endif

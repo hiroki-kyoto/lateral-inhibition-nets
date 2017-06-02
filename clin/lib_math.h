@@ -105,62 +105,6 @@ void conv_valid(layer * nl, layer * l, group * g){
     free_filter(f);
 }
 
-void make_lain_filter(filter * f, int r){
-    int i, k;
-    float s;
-    ASSERT(f!=NULL);
-    ASSERT(f->p!=NULL);
-    ASSERT(r>0);
-    ASSERT(f->w==2*r+1);
-    ASSERT(f->h==2*r+1);
-    s = 0.0;
-    f->p[r*f->w+r] = 1.0; // center weight
-    f->p[f->h*f->w] = 0.0; // bias set to be 0
-    for(i=-r; i<=r; ++i){
-        for(k=-r; k<=r; ++k){
-            if(i!=0 || k!=0){
-                s += 1.0/(i*i+k*k);
-            }
-        }
-    }
-    for(i=-r; i<=r; ++i){
-        for(k=-r; k<=r; ++k){
-            if(i!=0 || k!=0){
-                f->p[(i+r)*f->w+(k+r)] = -1.0/(i*i+k*k)/s;
-            }
-        }
-    }
-}
-
-// extend layer to specifed size with zeros
-void extend_layer_with_zeros(
-    layer *nl,
-    layer * l,
-    int r
-){
-    int i, j, k;
-    ASSERT(r>0);
-    ASSERT(nl->w==l->w+2*r);
-    ASSERT(nl->h==l->h+2*r);
-    ASSERT(nl->d==l->d);
-    // fill zeros into surrounded region
-    for(i=0; i<nl->h; ++i){
-        for(j=0; j<nl->w; ++j){
-            // this part is easy to be paralleled in GPUs
-            if(i<r || i>l->h-1+r || j<r || j>l->w-1+r){
-                for(k=0; k<nl->d; ++k){
-                    nl->p[k*nl->w*nl->h + i*nl->w+j] = 0;
-                }
-            } else {
-                for(k=0; k<nl->d; ++k){
-                    nl->p[k*nl->w*nl->h + i*nl->w+j] =
-                    l->p[k*l->w*l->h + (i-r)*l->w + j-r];
-                }
-            }
-        }
-    }
-}
-
 // nl: new layer
 // l: previous layer
 // r: radius for inhibition neighborhood
@@ -169,35 +113,25 @@ void extend_layer_with_zeros(
 // the same way as conv_valid().
 // [*] lain() keeps the dimension as it is.
 // [*] after lain, we should apply act() to the layer!!!
-void lain(layer * nl, layer * l, int r){
-    // create lain filter
-    group * g;;
-    filter * f;
-    layer * t;
+// [*] nl: foward layer to update
+// [*] el: extended layer from layer [l] with r, also to update
+// [*] la: lateral inhibitor
+// [*] [el] do not need to be initialized
+void lain(layer * nl, layer * el, layer * l, lainer * la){
+    group * g;
     ASSERT(nl->d==l->d);
     ASSERT(nl->w==l->w);
     ASSERT(nl->h==l->h);
-    g = alloc_group(1, 2*r+1, 2*r+1);
-    f = alloc_filter();
-    get_filter(f, g, 0);
-    make_lain_filter(f, r);
-    // extends the maps in layer [l]
-    t = alloc_layer(l->d, l->h+2*r, l->w+2*r);
-    extend_layer_with_zeros(t, l, r);
-    conv_valid(nl, t, g);
-    free_layer(t);
-    free_filter(f);
+    ASSERT(el->d==l->d);
+    ASSERT(el->w==l->w+2*la->r);
+    ASSERT(el->h==l->h+2*la->r);
+    g = alloc_group_with_filter(1, la->f);
+    extend_layer_with_zeros(el, l, la->r);
+    conv_valid(nl, el, g);
     free_group(g);
 }
 
-layer * alloc_next_layer_with_conv(layer * l, group * g){
-    return alloc_layer(l->d*g->n, l->h-g->h+1, l->w-g->w+1);
-}
-
-layer * alloc_same_size_layer(layer * l){
-    return alloc_layer(l->d, l->h, l->w);
-}
-
 // to-do : inception and backprop
+
 
 #endif
