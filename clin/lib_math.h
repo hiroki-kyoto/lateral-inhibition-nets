@@ -131,7 +131,17 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
     free_group(g);
 }
 
-// to-do : inception and backprop
+// to-do :
+// channel merge,
+// stacked filters(3x3=3x1+1x3)(Google Inception V4)
+// max-pooling(mean pooling ?)
+// stochastic gradient descending
+// direct classifier: from map to output:LI+SUM
+// try or not : ResNet...
+
+void merge(layer * nl, layer * l, merger_group * mg){
+    
+}
 
 
 #endif

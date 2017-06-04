@@ -88,6 +88,17 @@ typedef struct T_FILTER{
     float * p; // weight vector and bias
 }filter;
 
+typedef struct T_CHANNEL_MERGER_GROUP{
+    int n;  // number of mergers
+    int d;  // number of channels to merge(depth of last layer)
+    float * p;
+}merger_group;
+
+typedef struct T_CHANNEL_MEGER{
+    int d;  // number channels to merge(depth)
+    float * p;
+}merger;
+
 typedef struct T_LATERAL_INHIBITION{
     int r; // radius for lateral inhibition
     filter * f; // the filter specifed for lateral inhibition process
@@ -257,6 +268,33 @@ void get_filter(filter * f, group * g, int id){
     f->w = g->w;
     f->h = g->h;
     f->p = g->p + (id*(g->w*g->h+1));
+}
+
+// methods provided for allocating releasing channel mergers
+merger * alloc_merger(){
+    return (merger*)malloc(sizeof(merger));
+}
+
+merger_group * alloc_merger_group(int n, int d){
+    merger_group * mg = (merger_group*)malloc(sizeof(merger_group));
+    mg->n = n;
+    mg->d = d;
+    mg->p = (float*)malloc(sizeof(float)*n*(d+1));
+}
+
+merger * get_merger(merger * m, merger_group * mg, int id){
+    ASSERT(id<mg->n);
+    m->d = mg->d;
+    m->p = mg->p + (id*(mg->d+1));
+}
+
+void free_merger(merger * m){
+  free(m);
+}
+
+void free_merger_group(merger_group *mg){
+    free(mg->p);
+    free(mg);
 }
 
 void make_lain_filter(filter * f, int r){
