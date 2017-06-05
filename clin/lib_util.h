@@ -292,7 +292,15 @@ merger_group * alloc_merger_group(int n, int d){
     mg->p = (float*)malloc(sizeof(float)*n*(d+1));
 }
 
-merger * get_merger(merger * m, merger_group * mg, int id){
+void merger_group_rand(merger_group * mg, float min, float max){
+    int i, n;
+    n = mg->n * (mg->d+1);
+    for(i=0; i<n; ++i){
+        mg->p[i] = min + (max-min) * rand()/RAND_MAX;
+    }
+}
+
+void get_merger(merger * m, merger_group * mg, int id){
     ASSERT(id<mg->n);
     m->d = mg->d;
     m->p = mg->p + (id*(mg->d+1));
@@ -398,6 +406,20 @@ layer * alloc_extended_layer_with_lainer(
 
 layer * alloc_input_layer(dataset * ds){
     return alloc_layer(ds->d, ds->h, ds->w);
+}
+
+layer * alloc_next_layer_with_merger_group(
+    layer * l,
+    merger_group * mg
+){
+    return alloc_layer(mg->n, l->h, l->w);
+}
+
+layer * alloc_next_layer_with_stacked_filter_group(
+    layer * l,
+    stacked_filter_group * sfg
+){
+    
 }
 
 void load_input(layer * il, image * im){
@@ -598,22 +620,46 @@ void print_layer(layer * l){
 void print_lainer(lainer * la){
     fprintf(stdout, "[r]=%d\n", la->r);
     print_filter(la->f);
+    fprintf(stdout, "\n");
 }
 
 void print_sf(stacked_filter * sf){
-
+    int i;
+    fprintf(stdout, "[d]=[%d]\n", sf->d);
+    for(i=0; i<sf->d; ++i){
+        print_filter(sf->f[i]);
+    }
+    fprintf(stdout, "\n");
 }
 
 void print_sfg(stacked_filter_group * sfg){
-
+    int i;
+    fprintf(stdout, "[n,d]=[%d,%d]\n", sfg->n, sfg->d);
+    for(i=0; i<sfg->n; ++i){
+        print_sf(sfg->sf[i]);
+    }
+    fprintf(stdout, "\n");
 }
 
 void print_merger(merger * m){
-
+    int i;
+    fprintf(stdout, "[d]=[%d]\n", m->d);
+    for(i=0; i<m->d+1; ++i){
+        fprintf(stdout, "%9.3f\t", m->p[i]);
+    }
+    fprintf(stdout, "\n");
 }
 
 void print_merger_group(merger_group * mg){
-
+    int i;
+    merger * m = alloc_merger();
+    fprintf(stdout, "[n,d]=[%d,%d]\n", mg->n, mg->d);
+    for(i=0; i<mg->n; ++i){
+        get_merger(m, mg, i);
+        print_merger(m);
+    }
+    free_merger(m);
+    fprintf(stdout, "\n");
 }
 
 

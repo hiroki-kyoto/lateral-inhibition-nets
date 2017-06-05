@@ -139,16 +139,32 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
 // direct classifier: from map to output:LI+SUM
 // try or not : ResNet...
 
+
 void merge(layer * nl, layer * l, merger_group * mg){
+    int i, k, s, t;
+    float sum;
     ASSERT(nl->d==mg->n);
     ASSERT(l->d==mg->d);
     ASSERT(nl->w==l->w);
     ASSERT(nl->h==l->h);
+    for(i=0; i<nl->h; ++i){ // parallel-x
+        for(k=0; k<nl->w; ++k){ // parallel-y
+            for(s=0; s<nl->d; ++s){ // parallel-z
+                sum = mg->p[s*(mg->d+1)+l->d];//bias
+                for(t=0; t<l->d; ++t){
+                    sum += mg->p[s*(mg->d+1)+t]\
+                    *l->p[t*l->h*l->w+i*l->w+k];
 
+                }
+                nl->p[s*nl->h*nl->w+i*nl->w+k] = sum;
+            }
+        }
+    }
 }
 
+void conv_valid_sf(layer * nl, layer * l, stacked_filter_group * sfg){
 
-
+}
 
 
 #endif
