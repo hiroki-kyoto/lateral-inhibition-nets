@@ -132,7 +132,7 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
 }
 
 // to-do :
-// channel merge,
+// channel merge
 // stacked filters(3x3=3x1+1x3)(Google Inception V4)
 // max-pooling(mean pooling ?)
 // stochastic gradient descending
@@ -140,8 +140,15 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
 // try or not : ResNet...
 
 void merge(layer * nl, layer * l, merger_group * mg){
-    
+    ASSERT(nl->d==mg->n);
+    ASSERT(l->d==mg->d);
+    ASSERT(nl->w==l->w);
+    ASSERT(nl->h==l->h);
+
 }
+
+
+
 
 
 #endif

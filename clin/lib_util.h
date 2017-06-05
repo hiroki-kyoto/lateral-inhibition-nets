@@ -88,9 +88,20 @@ typedef struct T_FILTER{
     float * p; // weight vector and bias
 }filter;
 
+// stacked filters
+typedef struct T_STACKED_FILTER{
+    int d; // depth of stack of filters
+    filter ** f; // filters in stack
+}stacked_filter;
+
+typedef struct T_STACKED_FILTER_GROUP{
+    int n;
+    stacked_filter ** sf;
+}stacked_filter_group;
+
 typedef struct T_CHANNEL_MERGER_GROUP{
     int n;  // number of mergers
-    int d;  // number of channels to merge(depth of last layer)
+    int d;  // number of channels to merge
     float * p;
 }merger_group;
 
@@ -101,7 +112,7 @@ typedef struct T_CHANNEL_MEGER{
 
 typedef struct T_LATERAL_INHIBITION{
     int r; // radius for lateral inhibition
-    filter * f; // the filter specifed for lateral inhibition process
+    filter * f; // filter specifed for lateral inhibition
 }lainer;
 
 // memory allocated alone
@@ -262,8 +273,6 @@ void free_filter_alone(filter * f){
 }
 
 void get_filter(filter * f, group * g, int id){
-    ASSERT(f!=NULL);
-    ASSERT(g!=NULL);
     ASSERT(id<g->n);
     f->w = g->w;
     f->h = g->h;
@@ -276,7 +285,8 @@ merger * alloc_merger(){
 }
 
 merger_group * alloc_merger_group(int n, int d){
-    merger_group * mg = (merger_group*)malloc(sizeof(merger_group));
+    merger_group * mg =
+    (merger_group*)malloc(sizeof(merger_group));
     mg->n = n;
     mg->d = d;
     mg->p = (float*)malloc(sizeof(float)*n*(d+1));
@@ -377,7 +387,10 @@ layer * alloc_same_size_layer(layer * l){
     return alloc_layer(l->d, l->h, l->w);
 }
 
-layer * alloc_extended_layer_with_lainer(layer * l, lainer * la){
+layer * alloc_extended_layer_with_lainer(
+    layer * l,
+    lainer * la
+){
     layer * el;
     el = alloc_layer(l->d, l->h+2*la->r, l->w+2*la->r);
     return el;
@@ -402,9 +415,106 @@ void load_input(layer * il, image * im){
     }
 }
 
+stacked_filter * alloc_stacked_filter(int d){
+    stacked_filter * sf;
+    int i;
+    sf = (stacked_filter*)malloc(sizeof(stacked_filter));
+    sf->d = d;
+    sf->f = (filter**)malloc(sizeof(filter*)*d);
+    for(i=0; i<sf->d; ++i){
+        sf->f[i] = NULL;
+    }
+    return sf;
+}
+
+void sf_set_filter(stacked_filter * sf, int id, int h, int w){
+    sf->f[id] = alloc_filter_alone(h, w);
+}
+
+// memory allocation only apply for once!!!
+// d : depth of stack of filters
+// w : width array
+// h : height array
+stacked_filter * alloc_sf_once(int d, int * h, int * w){
+    int i;
+    stacked_filter * sf = alloc_stacked_filter(d);
+    for(i=0; i<sf->d; ++i){
+        sf_set_filter(sf, i, h[i], w[i]);
+    }
+    return sf;
+}
+
+void free_stacked_filter(stacked_filter * sf){
+    int i;
+    for(i=0; i<sf->d; ++i){
+        free_filter(sf->f[i]);
+    }
+    free(sf->f);
+    free(sf);
+}
+
+void filter_rand(filter * f, float min, float max){
+    int i, n;
+    n = f->w*f->h+1;
+    for(i=0;i<n;++i){
+        f->p[i] = min + (max-min)*rand()/RAND_MAX;
+    }
+}
+
+void sf_rand(stacked_filter * sf, float min, float max){
+    int k;
+    for(k=0; k<sf->d; ++k){
+        filter_rand(sf->f[k], min, max);
+    }
+}
+
+filter * sf_get_filter(stacked_filter * sf, int id){
+    ASSERT(id<sf->d);
+    return sf->f[id];
+}
+
+stacked_filter_group * alloc_stacked_filter_group(
+    int n,
+    int d,
+    int * h,
+    int * w
+){
+    stacked_filter_group * sfg;
+    int i;
+    sfg = (stacked_filter_group*)malloc(
+        sizeof(stacked_filter_group)
+    );
+    sfg->n = n;
+    sfg->sf = (stacked_filter**)malloc(sizeof(stacked_filter*)*n);
+    for(i=0; i<sfg->n; ++i){
+        sfg->sf[i] = alloc_sf_once(d, h, w);
+    }
+    return sfg;
+}
+
+void free_stacked_filter_group(stacked_filter_group * sfg){
+    int i;
+    for(i=0; i<sfg->n; ++i){
+        free_stacked_filter(sfg->sf[i]);
+    }
+    free(sfg->sf);
+    free(sfg);
+}
+
+void sfg_rand(stacked_filter_group * sfg, float min, float max){
+    int i;
+    for(i=0; i<sfg->n; ++i){
+        sf_rand(sfg->sf[i], min, max);
+    }
+}
+
+
+
+
 // python interation
 // filter weight retrive
-float f_w_r(filter * f, int x, int y){ // get weight element at (x,y)
+// get weight element at (x,y)
+float f_w_r(filter * f, int x, int y){
     ASSERT(x<f->w);
     ASSERT(y<f->h);
     return f->p[y*f->w + x];
@@ -424,7 +534,8 @@ void f_b_s(filter *f, float b){
     f->p[f->h*f->w] = b;
 }
 // map element retrive
-float m_e_r(map * m, int x, int y){ // get element at (x,y)
+// get element at (x,y)
+float m_e_r(map * m, int x, int y){
     ASSERT(x<m->w);
     ASSERT(y<m->h);
     return m->p[y*m->w + x];
@@ -451,7 +562,9 @@ void print_group(group * g){
     int i;
     filter * f;
     f = alloc_filter();
-    fprintf(stdout, "[n,h,w]=[%d,%d,%d]\n", g->n, g->h, g->w);
+    fprintf(stdout,
+        "[n,h,w]=[%d,%d,%d]\n",
+        g->n, g->h, g->w);
     for(i=0; i<g->n; ++i){
         get_filter(f, g, i);
         print_filter(f);
@@ -486,5 +599,23 @@ void print_lainer(lainer * la){
     fprintf(stdout, "[r]=%d\n", la->r);
     print_filter(la->f);
 }
+
+void print_sf(stacked_filter * sf){
+
+}
+
+void print_sfg(stacked_filter_group * sfg){
+
+}
+
+void print_merger(merger * m){
+
+}
+
+void print_merger_group(merger_group * mg){
+
+}
+
+
 
 #endif

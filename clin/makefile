@@ -9,6 +9,6 @@ lin:$(OBJ)
 $(OBJ):
 	$(CC) $(OFL) $(OBJ) $(IFL) $(SRC)
 clean:
-	rm *.o
+	rm *.o *.a
 run:
 	./$(TAR)
