@@ -9,6 +9,11 @@ typedef enum E_ACT_FUNC{
     ACT_SIGMOID
 }ACT_FUNC;
 
+typedef enum E_POOL_FUNC{
+    POOL_MAX,
+    POOL_MEAN
+}POOL_FUNC;
+
 float RLU(float x){
     return x>0?x:0;
 }
@@ -139,10 +144,26 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
 // direct classifier: from map to output:LI+SUM
 // try or not : ResNet...
 
+void merger_unit(
+    layer * nl,
+    layer * l,
+    merger_group * mg,
+    int z, // up to depth of nl
+    int y, // up to height of nl
+    int x // up to width of nl
+){
+    float sum;
+    int t;
+    sum = mg->p[z*(mg->d+1)+l->d]; //bias
+    for(t=0; t<l->d; ++t){
+        sum += mg->p[z*(mg->d+1)+t]\
+        *l->p[t*l->h*l->w+y*l->w+x];
+    }
+    nl->p[z*nl->h*nl->w+y*nl->w+x] = sum;
+}
 
 void merge(layer * nl, layer * l, merger_group * mg){
-    int i, k, s, t;
-    float sum;
+    int i, k, s;
     ASSERT(nl->d==mg->n);
     ASSERT(l->d==mg->d);
     ASSERT(nl->w==l->w);
@@ -150,21 +171,79 @@ void merge(layer * nl, layer * l, merger_group * mg){
     for(i=0; i<nl->h; ++i){ // parallel-x
         for(k=0; k<nl->w; ++k){ // parallel-y
             for(s=0; s<nl->d; ++s){ // parallel-z
-                sum = mg->p[s*(mg->d+1)+l->d];//bias
-                for(t=0; t<l->d; ++t){
-                    sum += mg->p[s*(mg->d+1)+t]\
-                    *l->p[t*l->h*l->w+i*l->w+k];
-
-                }
-                nl->p[s*nl->h*nl->w+i*nl->w+k] = sum;
+                merger_unit(nl, l, mg, s, i, k);
             }
         }
     }
 }
 
-void conv_valid_sf(layer * nl, layer * l, stacked_filter_group * sfg){
-
+float vmax(float * v, int n){
+    int i;
+    float m;
+    m = v[0];
+    for(i=1; i<n; ++){
+        m = m<v[i]?v:m;
+    }
+    return m;
 }
+
+float vmean(float * v, int n){
+    int i;
+    float m;
+    m = v[0];
+    for(i=1; i<n; ++i){
+        m += v[i];
+    }
+    return m/n;
+}
+
+// we're not going to use POOLing APIs
+void pool(
+    layer * nl,
+    layer * l,
+    POOL_FUNC p,
+    int h,
+    int w
+){
+    int i, k, h, s, t, x, y;
+    float * v = (float*)malloc(sizeof(float)*w*h);
+    ASSERT(w>0&&h>0);
+    ASSERT(nl->w==(l->w-1)/w+1);
+    ASSERT(nl->h==(l->h-1)/h+1);
+    ASSERT(nl->d==l->d);
+    for(i=0; i<nl->h; ++i){
+        for(k=0; k<nl->w; ++k){
+            for(h=0; h<nl->d; ++h){
+                for(s=0; s<h; ++s){
+                    for(t=0; t<w; ++t){
+                        if(i*h+s<l->h){
+                            y = i*h + s;
+                        } else {
+                            y = l->h - 1;
+                        }
+                        if(k*w+t<l->w){
+                            x = k*w + s;
+                        } else {
+                            x = l->w - 1;
+                        }
+                        v[s*w+t] = l->p[h*l->h*l->w+y*l->w+x];
+                    }
+                }
+                if(p==POOL_MAX){
+                    nl->p[h*(nl->w*nl->h)+i*nl->w+k] =
+                    vmax(v, w*h);
+                }
+                else if(p==POOL_MEAN){
+                    nl->p[h*(nl->w*nl->h)+i*nl->w+k] =
+                    vmean(v, w*h);
+                }
+            }
+        }
+    }
+    free(v);
+}
+
+
 
 
 #endif

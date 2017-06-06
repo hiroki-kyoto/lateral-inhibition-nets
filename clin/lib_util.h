@@ -75,6 +75,11 @@ typedef struct T_MAP{
     float * p;
 }map;
 
+typedef struct T_LAYER_GROUP{
+    int n;
+    layer ** l;
+}layer_group;
+
 typedef struct T_FILTER_GROUP{
     int n;
     int h;
@@ -173,6 +178,31 @@ layer * alloc_layer(int d, int h, int w){
 void free_layer(layer * lr){
     free(lr->p);
     free(lr);
+}
+
+// layer group methods
+layer_group * alloc_layer_group(int n, int d, int h, int w){
+    int i;
+    layer_group * lg = (layer_group*)malloc(sizeof(layer_group));
+    lg->n = n;
+    lg->l = (layer**)malloc(sizeof(layer*)*n);
+    for(i=0; i<n; ++i){
+        lg->l[i] = alloc_layer(d, h, w);
+    }
+}
+
+void free_layer_group(layer_group * lg){
+    int i;
+    for(i=0; i<lg->n; ++i){
+        free_layer(lg->l[i]);
+    }
+    free(lg->l);
+    free(lg);
+}
+
+layer * get_layer(layer_group * lg, int id){
+    ASSERT(id<lg->n);
+    return lg->l[id];
 }
 
 map * alloc_map_alone(int h, int w){
@@ -419,7 +449,8 @@ layer * alloc_next_layer_with_stacked_filter_group(
     layer * l,
     stacked_filter_group * sfg
 ){
-    
+    // have to allocate a few intermidiate layers
+    //return alloc_layer(sfg->n, );
 }
 
 void load_input(layer * il, image * im){
@@ -662,6 +693,49 @@ void print_merger_group(merger_group * mg){
     fprintf(stdout, "\n");
 }
 
+// neural network intergration
+typedef enum E_NEURAL_LAYER_TYPE{
+    NLT_CONV_NORMAL,
+    NLT_CONV_COMBINED,
+    NLT_LAIN,
+    NLT_MERGE,
+    NLT_MAX_POOL,
+    NLT_MEAN_POOL,
+    NLT_INPUT,
+    NLT_FULL_CONN,
+    NLT_SOFTMAX
+}neural_layer_type;
+
+// notice that input and output dimensions
+// are defined by the training dataset, and
+// they are supposed to be initialized at
+// the very first begining of net construction.
+typedef struct T_PARAM{
+    int conv_n; // filter number
+    int conv_h; // filter height
+    int conv_w; // filter weight
+    int lain_r; // lateral inhibition radius
+    int merg_n; // number of mergers
+    int pool_w; // pooling window width
+    int pool_h; // pooling window height
+    int full_n; // fully connected neurons
+    int acti_f; // activation function(ReLU,Sigmoid,...)
+}param;
+
+typedef struct T_NEURAL_LAYER{
+    neural_layer_type t;
+    layer_group * l;
+    param * p;
+}neural_layer;
+
+typedef struct T_NET{
+    int d; // depth
+    neural_layer ** l; // neural layers;
+}net;
+
+void append_layer(net * n, neural_layer_type t, param * p){
+    if(t==)
+}
 
 
 #endif
