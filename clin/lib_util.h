@@ -772,11 +772,33 @@ void net_set_train_ds(net * n, dataset * d, int lgi){
     free_image(im);
 }
 
-neural_layer * alloc_neural_layer_based_on_last(
+param * alloc_param(){
+    return (param*)malloc(sizeof(param));
+}
+
+param * copy_param(param * p){
+    param * _p = (param*)malloc(sizeof(param));
+    memmove((char*)_p, (char*)p, sizeof(param));
+    return _p;
+}
+
+void free_param(param * p){
+    free(p);
+}
+
+void alloc_input_neural_layer(
+    neural_layer * nl,
     neural_layer * l,
-    param * p
+    net * n
 ){
-    if(p->)
+    l->t = NLT_INPUT;
+    l->l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
+    l->p = NULL;
+}
+
+void free_neural_layer(neural_layer * l){
+    free_param(l->p);
+    free_layer_group(l->l);
 }
 
 net * alloc_net(){
@@ -784,7 +806,6 @@ net * alloc_net(){
 }
 
 void free_net(net * n){
-
 }
 
 void net_set_depth(net * n, int d){
@@ -793,12 +814,13 @@ void net_set_depth(net * n, int d){
 }
 
 void net_set_layer(net * n, int id, neural_layer_type t, param * p){
+    ASSERT(t!=NLT_INPUT);
+    n->l[id].p = copy_param(p);
     if(t==NLT_CONV_NORMAL){
     }
 }
 
 void net_construct_layers(net * n){
-
 }
 
 
