@@ -181,8 +181,8 @@ float vmax(float * v, int n){
     int i;
     float m;
     m = v[0];
-    for(i=1; i<n; ++){
-        m = m<v[i]?v:m;
+    for(i=1; i<n; ++i){
+        m = m<v[i]?v[i]:m;
     }
     return m;
 }
@@ -205,7 +205,7 @@ void pool(
     int h,
     int w
 ){
-    int i, k, h, s, t, x, y;
+    int i, k, m, s, t, x, y;
     float * v = (float*)malloc(sizeof(float)*w*h);
     ASSERT(w>0&&h>0);
     ASSERT(nl->w==(l->w-1)/w+1);
@@ -213,7 +213,7 @@ void pool(
     ASSERT(nl->d==l->d);
     for(i=0; i<nl->h; ++i){
         for(k=0; k<nl->w; ++k){
-            for(h=0; h<nl->d; ++h){
+            for(m=0; m<nl->d; ++m){
                 for(s=0; s<h; ++s){
                     for(t=0; t<w; ++t){
                         if(i*h+s<l->h){
@@ -226,15 +226,15 @@ void pool(
                         } else {
                             x = l->w - 1;
                         }
-                        v[s*w+t] = l->p[h*l->h*l->w+y*l->w+x];
+                        v[s*w+t] = l->p[m*l->h*l->w+y*l->w+x];
                     }
                 }
                 if(p==POOL_MAX){
-                    nl->p[h*(nl->w*nl->h)+i*nl->w+k] =
+                    nl->p[m*(nl->w*nl->h)+i*nl->w+k] =
                     vmax(v, w*h);
                 }
                 else if(p==POOL_MEAN){
-                    nl->p[h*(nl->w*nl->h)+i*nl->w+k] =
+                    nl->p[m*(nl->w*nl->h)+i*nl->w+k] =
                     vmean(v, w*h);
                 }
             }

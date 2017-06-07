@@ -666,7 +666,7 @@ void print_sf(stacked_filter * sf){
 
 void print_sfg(stacked_filter_group * sfg){
     int i;
-    fprintf(stdout, "[n,d]=[%d,%d]\n", sfg->n, sfg->d);
+    fprintf(stdout, "[n]=[%d]\n", sfg->n);
     for(i=0; i<sfg->n; ++i){
         print_sf(sfg->sf[i]);
     }
@@ -727,6 +727,7 @@ typedef struct T_NEURAL_LAYER{
     neural_layer_type t;
     layer_group * l;
     param * p;
+    group * g;
 }neural_layer;
 
 typedef struct T_LAYER_DIM{
@@ -743,35 +744,6 @@ typedef struct T_NET{
     int lgi; // label group id
 }net;
 
-// set training dataset and set the input and
-// output dimensions
-// required to set the label group id for dataset
-void net_set_train_ds(net * n, dataset * d, int lgi){
-    int i, n;
-    int hist[LABEL_CATEGORY];
-    image * im;
-    ASSERT(lgi<sizeof(label));
-    n->lgi = lgi;
-    memset(hist, 0, sizeof(hist));
-    net->i.d = d->d;
-    net->i.h = d->h;
-    net->i.w = d->w;
-    // stats for all label categories
-    for(i=0; i<d->n; ++i){
-        get_image(im, d, i);
-        ASSERT(im->l.data[lgi]<LABEL_CATEGORY);
-        hist[im->l.data[lgi]] ++;
-    }
-    for(i=0; i<LABEL_CATEGORY; ++i){
-        if(!hist[i]){
-            net->o = i;
-            break;
-        }
-    }
-    ASSERT(net->o>=2);
-    free_image(im);
-}
-
 param * alloc_param(){
     return (param*)malloc(sizeof(param));
 }
@@ -786,14 +758,37 @@ void free_param(param * p){
     free(p);
 }
 
-void alloc_input_neural_layer(
-    neural_layer * nl,
-    neural_layer * l,
-    net * n
-){
-    l->t = NLT_INPUT;
-    l->l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
-    l->p = NULL;
+// set training dataset and set the input and
+// output dimensions
+// required to set the label group id for dataset
+void net_set_data_env(net * n, dataset * d, int lgi){
+    int i;
+    int hist[LABEL_CATEGORY];
+    image * im;
+    ASSERT(lgi<sizeof(label));
+    n->lgi = lgi;
+    memset(hist, 0, sizeof(hist));
+    n->i.d = d->d;
+    n->i.h = d->h;
+    n->i.w = d->w;
+    // stats for all label categories
+    for(i=0; i<d->n; ++i){
+        get_image(im, d, i);
+        ASSERT((im->l).data[lgi]<LABEL_CATEGORY);
+        hist[(im->l).data[lgi]] ++;
+    }
+    for(i=0; i<LABEL_CATEGORY; ++i){
+        if(!hist[i]){
+            n->o = i;
+            break;
+        }
+    }
+    ASSERT((n->o)>=2);
+    free_image(im);
+    // construct the input neural layer
+    n->l[0].t = NLT_INPUT;
+    n->l[0].l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
+    n->l[0].p = NULL;
 }
 
 void free_neural_layer(neural_layer * l){
@@ -802,26 +797,56 @@ void free_neural_layer(neural_layer * l){
 }
 
 net * alloc_net(){
-    return (net*)malloc(sizeof(net));
+    net * n = (net*)malloc(sizeof(net));
+    n->d = 0;
+    n->l = NULL;
+    return n;
 }
 
 void free_net(net * n){
+    int i;
+    for(i=0; i<n->d; ++i){
+        free_neural_layer(n->l+i);
+    }
+    free(n->l);
+    free(n);
 }
 
+// depth include the input and output layers
 void net_set_depth(net * n, int d){
     n->d = d;
     n->l = (neural_layer*)malloc(sizeof(neural_layer)*d);
 }
 
 void net_set_layer(net * n, int id, neural_layer_type t, param * p){
-    ASSERT(t!=NLT_INPUT);
+    ASSERT(id>0&&id<n->d-1);
     n->l[id].p = copy_param(p);
     if(t==NLT_CONV_NORMAL){
+        // create a single layer for convolution data storing
+        n->l[id].l = alloc_layer_group(
+            p->conv_n,
+            n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
+            n->l[id-1].l->l[0]->h - p->conv_h + 1,
+            n->l[id-1].l->l[0]->w - p->conv_w + 1
+        );
+        // create filter group
+        //n->l[id-1].
+    } else if(t==NLT_CONV_COMBINED){
+        //
     }
 }
 
-void net_construct_layers(net * n){
+void net_set_output_layer(net * n, neural_layer_type t, param * p){
+    n->l[n->d-1].p = copy_param(p);
+    if(t==NLT_CONV_NORMAL){
+    } else if(t==NLT_CONV_COMBINED){
+    } else if(t==NLT_MAX_POOL){
+    } else if(t==NLT_MEAN_POOL){
+    } else if(t==NLT_FULL_CONN){
+    } else if(t==NLT_SOFTMAX){
+    } else {
+        ASSERT(0); // code never go here!!!
+    }
 }
-
 
 #endif
