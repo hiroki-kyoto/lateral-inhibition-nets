@@ -3,6 +3,7 @@
 
 #define PATH_MAX_LEN        1024
 #define LABEL_GROUPS        2
+#define LABEL_CATEGORY      256
 // cifar-10
 #define CIFAR_10_TRAIN_PATH     "../../lin/cifar-10-binary/data_batch_%d.bin"
 #define CIFAR_10_TEST_PATH      "../../lin/cifar-10-binary/test_batch.bin"
@@ -728,13 +729,76 @@ typedef struct T_NEURAL_LAYER{
     param * p;
 }neural_layer;
 
+typedef struct T_LAYER_DIM{
+    int d;
+    int h;
+    int w;
+}dim;
+
 typedef struct T_NET{
     int d; // depth
-    neural_layer ** l; // neural layers;
+    neural_layer * l; // neural layers;
+    dim i;
+    int o;
+    int lgi; // label group id
 }net;
 
-void append_layer(net * n, neural_layer_type t, param * p){
-    if(t==)
+// set training dataset and set the input and
+// output dimensions
+// required to set the label group id for dataset
+void net_set_train_ds(net * n, dataset * d, int lgi){
+    int i, n;
+    int hist[LABEL_CATEGORY];
+    image * im;
+    ASSERT(lgi<sizeof(label));
+    n->lgi = lgi;
+    memset(hist, 0, sizeof(hist));
+    net->i.d = d->d;
+    net->i.h = d->h;
+    net->i.w = d->w;
+    // stats for all label categories
+    for(i=0; i<d->n; ++i){
+        get_image(im, d, i);
+        ASSERT(im->l.data[lgi]<LABEL_CATEGORY);
+        hist[im->l.data[lgi]] ++;
+    }
+    for(i=0; i<LABEL_CATEGORY; ++i){
+        if(!hist[i]){
+            net->o = i;
+            break;
+        }
+    }
+    ASSERT(net->o>=2);
+    free_image(im);
+}
+
+neural_layer * alloc_neural_layer_based_on_last(
+    neural_layer * l,
+    param * p
+){
+    if(p->)
+}
+
+net * alloc_net(){
+    return (net*)malloc(sizeof(net));
+}
+
+void free_net(net * n){
+
+}
+
+void net_set_depth(net * n, int d){
+    n->d = d;
+    n->l = (neural_layer*)malloc(sizeof(neural_layer)*d);
+}
+
+void net_set_layer(net * n, int id, neural_layer_type t, param * p){
+    if(t==NLT_CONV_NORMAL){
+    }
+}
+
+void net_construct_layers(net * n){
+
 }
 
 
