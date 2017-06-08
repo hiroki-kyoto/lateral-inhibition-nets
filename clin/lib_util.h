@@ -168,6 +168,9 @@ void get_image(image * im, dataset * ds, int id){
 layer * alloc_layer(int d, int h, int w){
     layer * lr = (layer*)malloc(sizeof(layer));
     ASSERT(lr!=NULL);
+    ASSERT(d>0);
+    ASSERT(h>0);
+    ASSERT(w>0);
     lr->d = d;
     lr->h = h;
     lr->w = w;
@@ -185,6 +188,7 @@ void free_layer(layer * lr){
 layer_group * alloc_layer_group(int n, int d, int h, int w){
     int i;
     layer_group * lg = (layer_group*)malloc(sizeof(layer_group));
+    ASSERT(n>0);
     lg->n = n;
     lg->l = (layer**)malloc(sizeof(layer*)*n);
     for(i=0; i<n; ++i){
@@ -724,10 +728,10 @@ typedef struct T_PARAM{
 }param;
 
 typedef struct T_NEURAL_LAYER{
-    neural_layer_type t;
-    layer_group * l;
-    param * p;
-    group * g;
+    neural_layer_type t;    // neural layer type
+    layer_group * l;    // layers
+    param * p;  // given params
+    group * g;  // trainable params
 }neural_layer;
 
 typedef struct T_LAYER_DIM{
@@ -814,6 +818,7 @@ void free_net(net * n){
 
 // depth include the input and output layers
 void net_set_depth(net * n, int d){
+    ASSERT(d>=3);
     n->d = d;
     n->l = (neural_layer*)malloc(sizeof(neural_layer)*d);
 }
@@ -821,7 +826,10 @@ void net_set_depth(net * n, int d){
 void net_set_layer(net * n, int id, neural_layer_type t, param * p){
     ASSERT(id>0&&id<n->d-1);
     n->l[id].p = copy_param(p);
+    n->l[id].t = t;
     if(t==NLT_CONV_NORMAL){
+        // create filter group
+        n->l[id].g = alloc_group(p->conv_n, p->conv_h, p->conv_w);
         // create a single layer for convolution data storing
         n->l[id].l = alloc_layer_group(
             p->conv_n,
@@ -829,10 +837,23 @@ void net_set_layer(net * n, int id, neural_layer_type t, param * p){
             n->l[id-1].l->l[0]->h - p->conv_h + 1,
             n->l[id-1].l->l[0]->w - p->conv_w + 1
         );
-        // create filter group
-        //n->l[id-1].
     } else if(t==NLT_CONV_COMBINED){
-        //
+        // make sure it keeps the dimension of channel
+        ASSERT(p->conv_n==n->l[id-1].l->n);
+        // create filter group
+        n->l[id].g = alloc_group(p->conv_n, p->conv_h, p->conv_w);
+        // create a single layer for convolution data storing
+        n->l[id].l = alloc_layer_group(
+            n->l[id-1].l->n,
+            n->l[id-1].l->l[0]->d,
+            n->l[id-1].l->l[0]->h - p->conv_h + 1,
+            n->l[id-1].l->l[0]->w - p->conv_w + 1
+        );
+    } else if(t==NLT_LAIN){
+        ASSERT(p->lain_r>0);
+        // create distrainable filter group
+        n->l[id].g = alloc_group(1, 2*p->lain_r+1, 2*p->lain_r+1);
+        make_lain_filter();
     }
 }
 
@@ -847,6 +868,17 @@ void net_set_output_layer(net * n, neural_layer_type t, param * p){
     } else {
         ASSERT(0); // code never go here!!!
     }
+}
+
+void load_net_achitecture(const char * file){
+    char c;
+
+    FILE * fp = fopen(file, "rt");
+    ASSERT(!fp);
+    c = fgetc(fp);
+    // to be implemented
+
+    fclose(fp);
 }
 
 #endif
