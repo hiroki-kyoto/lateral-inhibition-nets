@@ -377,6 +377,14 @@ void make_lain_filter(filter * f, int r){
     }
 }
 
+void make_lain_filter_group(group * g, int r){
+    filter * f;
+    f = alloc_filter();
+    get_filter(f, g, 0);
+    make_lain_filter(f, r);
+    free_filter(f);
+}
+
 // lateral inhibition layer
 lainer * alloc_lainer(int r){
     lainer * la;
@@ -853,7 +861,7 @@ void net_set_layer(net * n, int id, neural_layer_type t, param * p){
         ASSERT(p->lain_r>0);
         // create distrainable filter group
         n->l[id].g = alloc_group(1, 2*p->lain_r+1, 2*p->lain_r+1);
-        make_lain_filter();
+        make_lain_filter_group(n->l[id].g, p->lain_r);
     }
 }
 
