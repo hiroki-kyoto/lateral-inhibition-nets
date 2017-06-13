@@ -245,8 +245,8 @@ void pool(
 
 // softmax layer computation
 // all neurons are considered as filters
-void softmax(layer_group * l, filter_group * f){
-    
+void softmax(layer_group * l, group * g){
+    // to be implemented
 }
 
 

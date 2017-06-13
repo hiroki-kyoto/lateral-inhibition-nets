@@ -756,6 +756,18 @@ typedef struct T_NET{
     int lgi; // label group id
 }net;
 
+// training staff
+typedef enum E_TRAIN_METHOD{
+    TM_BP,
+    TM_SGD
+}TRAIN_METHOD;
+typedef struct T_TRAINER{
+    TRAIN_METHOD m; // training method
+    float e;        // learning rate
+    float d;        // descending rate of learning rate
+    int n;          // maximum number of epoch of whole training set
+}trainer;
+
 param * alloc_param(){
     return (param*)malloc(sizeof(param));
 }
@@ -862,6 +874,15 @@ void net_set_layer(net * n, int id, neural_layer_type t, param * p){
         // create distrainable filter group
         n->l[id].g = alloc_group(1, 2*p->lain_r+1, 2*p->lain_r+1);
         make_lain_filter_group(n->l[id].g, p->lain_r);
+        // create associated layer, the same size of last one
+        n->l[id].l = alloc_layer_group(
+            n->l[id-1].l->n,
+            n->l[id-1].l->l[0]->d,
+            n->l[id-1].l->l[0]->h,
+            n->l[id-1].l->l[0]->w
+        );
+    } else if(t==NLT_MERGE){
+        ////
     }
 }
 
