@@ -2,6 +2,7 @@
 #ifndef LIB_MATH_H
 #define LIB_MATH_H
 
+#include <stdlib.h>
 #include <math.h>
 
 typedef enum E_ACT_FUNC{
@@ -247,6 +248,11 @@ void pool(
 // all neurons are considered as filters
 void softmax(layer_group * l, group * g){
     // to be implemented
+}
+
+void comput_forward(net * n, trainer * t, dataset * d){
+	// start from the first layer
+	 
 }
 
 

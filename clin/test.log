@@ -1,3 +1,4 @@
+xxx
 ./lin.a
 CIFAR-10 TRAINING DATA READ OK.
 CIFAR-10 TEST DATA READ OK.
@@ -20,7 +21,7 @@ MSG@lin.c#44:lateral inhibitor:
    -0.613	    0.617	
     0.170	
 [h,w]=[2,2]
-   -0.040	   -0.299	
+	0.040	   -0.299	
     0.792	    0.646	
     0.493	
 MSG@lin.c#83:input layer:

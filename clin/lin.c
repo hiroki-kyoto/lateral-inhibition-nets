@@ -2,7 +2,34 @@
 #include "lib_read_dataset.h"
 #include "lib_math.h"
 
-int main()
+
+int main(int argc, const char ** argv){
+	net * lin = alloc_net();
+	
+	fprintf(stdout, "====== LOAD DATASET ========\n");
+	dataset * cifar_10_train = get_cifar_10_train();
+	fprintf(stdout, "CIFAR-10 TRAINING DATA READ OK.\n");
+	
+	dataset * cifar_10_test = get_cifar_10_test();
+	fprintf(stdout, "CIFAR-10 TEST DATA READ OK.\n");
+
+	// set dataset to the net
+	net_set_data_env(lin, cifar_10_train, 0);
+
+	fprintf(stdout, "====== LOAD NET MODEL ======\n");
+	load_net_model(lin, "lin5.net");
+
+	// free nets
+	//free_net(lin);	
+
+	// free datasets
+	free_dataset(cifar_10_train);
+	free_dataset(cifar_10_test);
+
+	return 0;
+}
+
+int test()
 {
 	// read datasets
 	dataset * cifar_10_train = get_cifar_10_train();
@@ -116,3 +143,4 @@ int main()
 
 	return 0;
 }
+

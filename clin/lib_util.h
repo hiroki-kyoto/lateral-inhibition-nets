@@ -726,7 +726,7 @@ typedef enum E_NEURAL_LAYER_TYPE{
 typedef struct T_PARAM{
     int conv_n; // filter number
     int conv_h; // filter height
-    int conv_w; // filter weight
+    int conv_w; // filter width
     int lain_r; // lateral inhibition radius
     int merg_n; // number of mergers
     int pool_w; // pooling window width
@@ -737,9 +737,10 @@ typedef struct T_PARAM{
 
 typedef struct T_NEURAL_LAYER{
     neural_layer_type t;    // neural layer type
-    layer_group * l;    // layers
-    param * p;  // given params
-    group * g;  // trainable params
+    layer_group * l;    	// layers
+    param * p;  			// given params
+    group * g;  			// trainable params
+	merger_group * m;		// trainable merger params
 }neural_layer;
 
 typedef struct T_LAYER_DIM{
@@ -788,10 +789,10 @@ void free_param(param * p){
 void net_set_data_env(net * n, dataset * d, int lgi){
     int i;
     int hist[LABEL_CATEGORY];
-    image * im;
+    image * im = alloc_image();
     ASSERT(lgi<sizeof(label));
     n->lgi = lgi;
-    memset(hist, 0, sizeof(hist));
+    memset((char*)hist, 0, sizeof(hist));
     n->i.d = d->d;
     n->i.h = d->h;
     n->i.w = d->w;
@@ -806,13 +807,10 @@ void net_set_data_env(net * n, dataset * d, int lgi){
             n->o = i;
             break;
         }
+	fprintf(stdout, "LABEL#%d CONTAINS [%d] SAMPLES\n", i, hist[i]);
     }
     ASSERT((n->o)>=2);
     free_image(im);
-    // construct the input neural layer
-    n->l[0].t = NLT_INPUT;
-    n->l[0].l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
-    n->l[0].p = NULL;
 }
 
 void free_neural_layer(neural_layer * l){
@@ -821,10 +819,10 @@ void free_neural_layer(neural_layer * l){
 }
 
 net * alloc_net(){
-    net * n = (net*)malloc(sizeof(net));
-    n->d = 0;
-    n->l = NULL;
-    return n;
+	net * n = (net*)malloc(sizeof(net));
+	n->d = 0;
+	n->l = NULL;
+	return n;
 }
 
 void free_net(net * n){
@@ -838,76 +836,228 @@ void free_net(net * n){
 
 // depth include the input and output layers
 void net_set_depth(net * n, int d){
-    ASSERT(d>=3);
-    n->d = d;
-    n->l = (neural_layer*)malloc(sizeof(neural_layer)*d);
+	ASSERT(d>=3);
+	n->d = d;
+	n->l = (neural_layer*)malloc(sizeof(neural_layer)*d);
+	// construct the input neural layer
+	n->l[0].t = NLT_INPUT;
+	n->l[0].l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
+	n->l[0].p = NULL;
 }
 
-void net_set_layer(net * n, int id, neural_layer_type t, param * p){
-    ASSERT(id>0&&id<n->d-1);
-    n->l[id].p = copy_param(p);
-    n->l[id].t = t;
-    if(t==NLT_CONV_NORMAL){
-        // create filter group
-        n->l[id].g = alloc_group(p->conv_n, p->conv_h, p->conv_w);
-        // create a single layer for convolution data storing
-        n->l[id].l = alloc_layer_group(
-            p->conv_n,
-            n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
-            n->l[id-1].l->l[0]->h - p->conv_h + 1,
-            n->l[id-1].l->l[0]->w - p->conv_w + 1
-        );
-    } else if(t==NLT_CONV_COMBINED){
-        // make sure it keeps the dimension of channel
-        ASSERT(p->conv_n==n->l[id-1].l->n);
-        // create filter group
-        n->l[id].g = alloc_group(p->conv_n, p->conv_h, p->conv_w);
-        // create a single layer for convolution data storing
-        n->l[id].l = alloc_layer_group(
-            n->l[id-1].l->n,
-            n->l[id-1].l->l[0]->d,
-            n->l[id-1].l->l[0]->h - p->conv_h + 1,
-            n->l[id-1].l->l[0]->w - p->conv_w + 1
-        );
-    } else if(t==NLT_LAIN){
-        ASSERT(p->lain_r>0);
-        // create distrainable filter group
-        n->l[id].g = alloc_group(1, 2*p->lain_r+1, 2*p->lain_r+1);
-        make_lain_filter_group(n->l[id].g, p->lain_r);
-        // create associated layer, the same size of last one
-        n->l[id].l = alloc_layer_group(
-            n->l[id-1].l->n,
-            n->l[id-1].l->l[0]->d,
-            n->l[id-1].l->l[0]->h,
-            n->l[id-1].l->l[0]->w
-        );
-    } else if(t==NLT_MERGE){
-        ////
-    }
+void net_set_layer(
+	net * n, 
+	int id, 
+	neural_layer_type t, 
+	param * p
+){
+	ASSERT(id>0 && id<n->d-1);
+	n->l[id].t = t;
+	
+	if(t==NLT_CONV_NORMAL){
+		// create filter group
+		n->l[id].g = alloc_group(
+			p->conv_n, 
+			p->conv_h, 
+			p->conv_w
+		);
+		// single layer for convolution
+		n->l[id].l = alloc_layer_group(
+			p->conv_n,
+			n->l[id-1].l->n * n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h - p->conv_h + 1,
+			n->l[id-1].l->l[0]->w - p->conv_w + 1
+		);
+	} else if(t==NLT_CONV_COMBINED){
+        	// make sure it keeps the dimension of channel
+		ASSERT(p->conv_n==n->l[id-1].l->n);
+        	// create filter group
+		n->l[id].g = alloc_group(
+			p->conv_n, 
+			p->conv_h, 
+			p->conv_w
+		);
+		// create a single layer for convolution
+		n->l[id].l = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h - p->conv_h + 1,
+			n->l[id-1].l->l[0]->w - p->conv_w + 1
+		);
+	} else if(t==NLT_LAIN){
+		ASSERT(p->lain_r>0);
+		// create distrainable filter group
+		n->l[id].g = alloc_group(
+			1, 
+			2*p->lain_r+1, 
+			2*p->lain_r+1
+		);
+		make_lain_filter_group(n->l[id].g, p->lain_r);
+		// the same size of last layer
+		n->l[id].l = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
+	} else if(t==NLT_MERGE){
+		ASSERT(p->merg_n>=0);
+		// create merger group : trainable params
+		if(p->merg_n==0){
+			p->merg_n = n->o;
+		}
+		n->l[id].m = alloc_merger_group(
+			p->merg_n,
+			n->l[id-1].l->n * n->l[id-1].l->l[0]->d
+		);
+		// create layer
+		n->l[id].l = alloc_layer_group(
+			p->merg_n,
+			1,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
+	} else if(t==NLT_MAX_POOL || t==NLT_MEAN_POOL){
+		ASSERT(p->pool_w>=0 && p->pool_h>=0);
+		ASSERT(p->pool_w<=n->l[id-1].l->l[0]->w);
+		ASSERT(p->pool_h<=n->l[id-1].l->l[0]->h);
+		// pooled layer group
+		if(p->pool_w==0){
+			p->pool_w = n->l[id-1].l->l[0]->w;
+		}
+		if(p->pool_h==0){
+			p->pool_h = n->l[id-1].l->l[0]->h;
+		}
+		n->l[id].l = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
+			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
+		);
+	} else if(t==NLT_INPUT){
+		ASSERT(0); // in no case this can be executed
+	} else if(t==NLT_FULL_CONN){
+		// full conn is a special case for conv
+		// create filter group
+		n->l[id].g = alloc_group(
+			p->full_n, 
+			n->l[id-1].l->l[0]->h, 
+			n->l[id-1].l->l[0]->w
+		);
+		// final map is 1x1 sized
+		n->l[id].l = alloc_layer_group(
+			p->full_n,
+			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
+			1,
+			1
+		);
+		// normally a merger group is followed
+		// to reduce the dimension to [full_n]
+	} else if(t==NLT_SOFTMAX){
+		ASSERT(0); // in on cases this can be executed
+	} else {
+		ASSERT(0); // in on cases this can be executed
+	}
+	// copy params to current layer
+	n->l[id].p = copy_param(p);
 }
 
-void net_set_output_layer(net * n, neural_layer_type t, param * p){
-    n->l[n->d-1].p = copy_param(p);
-    if(t==NLT_CONV_NORMAL){
-    } else if(t==NLT_CONV_COMBINED){
-    } else if(t==NLT_MAX_POOL){
-    } else if(t==NLT_MEAN_POOL){
-    } else if(t==NLT_FULL_CONN){
-    } else if(t==NLT_SOFTMAX){
-    } else {
-        ASSERT(0); // code never go here!!!
-    }
+void net_set_output_layer(
+	net * n, 
+	neural_layer_type t, 
+	param * p
+){
+	int id;
+	id = n->d - 1;
+	if(t==NLT_MAX_POOL || t==NLT_MEAN_POOL){
+		// check pool core dimension
+		ASSERT(p->pool_w>0 && p->pool_h>0);
+		ASSERT(p->pool_w<=n->l[id-1].l->l[0]->w);
+		ASSERT(p->pool_h<=n->l[id-1].l->l[0]->h);
+		// pooled layer group
+		if(p->pool_w==0){
+			p->pool_w = n->l[id-1].l->l[0]->w;
+		}
+		if(p->pool_h==0){
+			p->pool_h = n->l[id-1].l->l[0]->h;
+		}
+		// pooled layer group
+		n->l[id].l = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
+			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
+		);
+		// match the output dimension?
+		// to ensure this, plz add a merger
+		// group before such output layer
+		ASSERT(n->l[id].l->n==n->o);
+		ASSERT(n->l[id].l->l[0]->d==1);
+		ASSERT(n->l[id].l->l[0]->h==1);
+		ASSERT(n->l[id].l->l[0]->w==1);
+	} else if(t==NLT_MERGE){
+		ASSERT(p->merg_n>=0);
+		// create merger group : trainable params
+		if(p->merg_n==0){
+			p->merg_n = n->o;
+		}
+		n->l[id].m = alloc_merger_group(
+			p->merg_n,
+			n->l[id-1].l->n * n->l[id-1].l->l[0]->d
+		);
+		// create layer
+		n->l[id].l = alloc_layer_group(
+			p->merg_n,
+			1,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
+		// matches the output dimension?
+		ASSERT(n->l[id].l->n==n->o);
+		ASSERT(n->l[id].l->l[0]->h==1);
+		ASSERT(n->l[id].l->l[0]->w==1);
+	} else if(t==NLT_SOFTMAX){
+		ASSERT(0); // currently not applicable
+	} else {
+		ASSERT(0); // bad configuration
+	}
+	// copy params
+	n->l[n->d-1].p = copy_param(p);
 }
 
-void load_net_achitecture(const char * file){
-    char c;
-
-    FILE * fp = fopen(file, "rt");
-    ASSERT(!fp);
-    c = fgetc(fp);
-    // to be implemented
-
-    fclose(fp);
+void load_net_model(net * n, const char * file){
+	char c;
+	char str[256];
+	int i;
+	FILE * fp = fopen(file, "rt");
+	// this recommends the net model be initialized with
+	// some training dataset required reasonably
+	ASSERT(fp);
+	ASSERT(n);
+	ASSERT(n->o>0 && n->i.d>0 && n->i.h>0 && n->i.w>0);
+	// get layer number
+	i = 0;
+	while(!feof(fp)){
+		if(fgetc(fp)=='\n'){
+			++i; // layer increments
+		}
+	}
+	net_set_depth(n, i+1); // add an input layer
+	i = 0;
+	fseek(fp, 0L, SEEK_SET);
+	while(!feof(fp)){
+		ASSERT(i<sizeof(str)-1);
+		str[i] = fgetc(fp);
+		str[i+1] = 0;
+		if(str[i]=='\n'){
+			fprintf(stdout, "%s", str);
+			i = 0;
+		} else {
+			++i;
+		}
+	}
+	fclose(fp);
 }
 
 #endif
+
