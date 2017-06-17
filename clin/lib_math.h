@@ -6,7 +6,7 @@
 #include <math.h>
 
 typedef enum E_ACT_FUNC{
-    ACT_RLU,
+    ACT_RELU,
     ACT_SIGMOID
 }ACT_FUNC;
 
@@ -29,12 +29,12 @@ void act(layer * nl, layer * l, ACT_FUNC a){
     ASSERT(nl->d==l->d);
     ASSERT(nl->h==l->h);
     ASSERT(nl->w==l->w);
-    ASSERT(a==ACT_RLU || a==ACT_SIGMOID);
+    ASSERT(a==ACT_RELU || a==ACT_SIGMOID);
     // in GPUs, this will remap into 3-dim task
     for(i=0; i<l->d; ++i){
         for(k=0; k<l->h; ++k){
             for(m=0; m<l->w; ++m){
-                if(a==ACT_RLU){
+                if(a==ACT_RELU){
                     nl->p[i*l->h*l->w+k*l->w+m] =
                     RLU(l->p[i*l->h*l->w+k*l->w+m]);
                 } else if(a==ACT_SIGMOID) {
@@ -244,6 +244,180 @@ void pool(
     free(v);
 }
 
+
+/**** constructing nets with a user-defined script file *****/
+void load_net_model(net * n, const char * file){
+	char c, str[256], t[64], f[64];
+	int i, k, d, h, w;
+	FILE * fp = fopen(file, "rt");
+	ACT_FUNC a; // activation function option
+	param * p = alloc_param();
+	// this recommends the net model be initialized with
+	// some training dataset required reasonably
+	ASSERT(fp);
+	ASSERT(n);
+	ASSERT(n->o>0 && n->i.d>0 && n->i.h>0 && n->i.w>0);
+	// get layer number
+	k = 0;
+	while(!feof(fp)){
+		if(fgetc(fp)=='\n'){
+			++k; // layer increments
+		}
+	}
+	net_set_depth(n, k+1); // add an input layer
+	i = 0;
+	k = 1;
+	fseek(fp, 0L, SEEK_SET);
+	while(!feof(fp)){
+		ASSERT(i<sizeof(str)-1);
+		str[i] = fgetc(fp);
+		str[i+1] = 0;
+		if(str[i]=='\n'){
+			// extract configuration parameters
+			memset(t, 0, sizeof(t));
+			sscanf(str, "%s%s%d%d%d", t, f, &d, &h, &w);
+			fprintf(stdout, "layer#%d\n", k+1);
+			fprintf(stdout, "type:\t%s\n", t);
+			fprintf(stdout, "act:\t%s\n", f);
+			fprintf(stdout, "depth:\t%d\n", d);
+			fprintf(stdout, "height:\t%d\n", h);
+			fprintf(stdout, "width:\t%d\n", w);
+			// check validality for the activation function
+			if(i_str_cmp(f, "sigmoid")){
+				a = ACT_SIGMOID;
+			} else if(i_str_cmp(f, "relu")){
+				a = ACT_RELU;
+			} else {
+				ASSERT(0); // invalid option for activation
+			}
+			// construct layers
+			if(i_str_cmp(t, "merge")){
+				p->merg_n = d;
+				p->acti_f = a;
+				if(k==n->d-1){ // output layer
+					net_set_output_layer(
+						n, 
+						NLT_MERGE, 
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_MERGE, 
+						p
+					);
+				}
+			} else if(i_str_cmp(t, "conv")){
+				p->conv_n = d;
+				p->conv_h = h;
+				p->conv_w = w;
+				p->acti_f = a;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n, 
+						NLT_CONV_NORMAL,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_CONV_NORMAL, 
+						p
+					);
+				}
+			} else if(i_str_cmp(t, "pool_max")){
+				p->pool_h = d;
+				p->pool_w = h;
+				p->acti_f = a;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n,
+						NLT_MAX_POOL,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_MAX_POOL, 
+						p
+					);
+				}
+			} else if(i_str_cmp(t, "lain")){
+				p->lain_r = d;
+				p->acti_f = a;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n,
+						NLT_LAIN,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_LAIN, 
+						p
+					);
+				}
+			} else if(i_str_cmp(t, "conv_comb")){
+				p->conv_n = d;
+				p->conv_h = h;
+				p->conv_w = w;
+				p->acti_f = a;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n,
+						NLT_CONV_COMBINED,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_CONV_COMBINED, 
+						p
+					);
+				}
+			} else if(t=="pool_mean"){
+				p->pool_h = d;
+				p->pool_w = h;
+				p->acti_f = a;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n,
+						NLT_MEAN_POOL,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_MEAN_POOL, 
+						p
+					);
+				}
+			} else if(t=="softmax"){
+				// not applicabel yet
+				DOT("SOFTMAX not applicable yet!\n");
+				ASSERT(0);
+			} else {
+				DOT("bad configuration of net model!\n");
+				ASSERT(0);
+			}
+			++k;
+			i = 0;
+		} else {
+			++i;
+		}
+	}
+	fclose(fp);
+}
+
+
+
 // softmax layer computation
 // all neurons are considered as filters
 void softmax(layer_group * l, group * g){
@@ -251,10 +425,12 @@ void softmax(layer_group * l, group * g){
 }
 
 void comput_forward(net * n, trainer * t, dataset * d){
-	// start from the first layer
-	 
+	// start from the input layer
+	ASSERT(t->n<1024); // epoch num should be reasonable
+	
 }
 
 
 
 #endif
+

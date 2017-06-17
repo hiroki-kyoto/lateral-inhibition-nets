@@ -25,14 +25,16 @@
 #define CIFAR_100_TEST_ROWS     10000
 // debug tool
 #define ASSERT(x) {\
-    if(!(x)){\
-        fprintf(stdout, "ERROR:@%s#%d\n", __FILE__, __LINE__);\
-        exit(1);\
-    }\
+	if(!(x)){\
+		fprintf(stdout, "ERROR:@%s#%d\n", __FILE__, __LINE__);\
+		fflush(stdout);\
+		exit(1);\
+	}\
 }
 
 #define DOT(x){\
-    fprintf(stdout, "MSG@%s#%d:%s\n", __FILE__, __LINE__, x);\
+	fprintf(stdout, "MSG@%s#%d:%s\n", __FILE__, __LINE__, x);\
+	fflush(stdout);\
 }
 
 typedef unsigned char byte;
@@ -186,14 +188,15 @@ void free_layer(layer * lr){
 
 // layer group methods
 layer_group * alloc_layer_group(int n, int d, int h, int w){
-    int i;
-    layer_group * lg = (layer_group*)malloc(sizeof(layer_group));
-    ASSERT(n>0);
-    lg->n = n;
-    lg->l = (layer**)malloc(sizeof(layer*)*n);
-    for(i=0; i<n; ++i){
-        lg->l[i] = alloc_layer(d, h, w);
-    }
+	int i;
+	layer_group * lg = (layer_group*)malloc(sizeof(layer_group));
+	ASSERT(n>0);
+	lg->n = n;
+	lg->l = (layer**)malloc(sizeof(layer*)*n);
+	for(i=0; i<n; ++i){
+		lg->l[i] = alloc_layer(d, h, w);
+	}
+	return lg;
 }
 
 void free_layer_group(layer_group * lg){
@@ -320,11 +323,11 @@ merger * alloc_merger(){
 }
 
 merger_group * alloc_merger_group(int n, int d){
-    merger_group * mg =
-    (merger_group*)malloc(sizeof(merger_group));
-    mg->n = n;
-    mg->d = d;
-    mg->p = (float*)malloc(sizeof(float)*n*(d+1));
+	merger_group * mg = (merger_group*)malloc(sizeof(merger_group));
+	mg->n = n;
+	mg->d = d;
+	mg->p = (float*)malloc(sizeof(float)*n*(d+1));
+	return mg;
 }
 
 void merger_group_rand(merger_group * mg, float min, float max){
@@ -735,12 +738,28 @@ typedef struct T_PARAM{
     int acti_f; // activation function(ReLU,Sigmoid,...)
 }param;
 
+
+// parameters
+param * alloc_param(){
+    return (param*)malloc(sizeof(param));
+}
+
+param * copy_param(param * p){
+    param * _p = (param*)malloc(sizeof(param));
+    memmove((char*)_p, (char*)p, sizeof(param));
+    return _p;
+}
+
+void free_param(param * p){
+    free(p);
+}
+
 typedef struct T_NEURAL_LAYER{
-    neural_layer_type t;    // neural layer type
-    layer_group * l;    	// layers
-    param * p;  			// given params
-    group * g;  			// trainable params
-	merger_group * m;		// trainable merger params
+	neural_layer_type t;    // neural layer type
+	layer_group * l;    	// layers
+	param * p;  		// given params
+	group * g;  		// trainable params
+	merger_group * m;	// trainable merger params
 }neural_layer;
 
 typedef struct T_LAYER_DIM{
@@ -762,6 +781,7 @@ typedef enum E_TRAIN_METHOD{
     TM_BP,
     TM_SGD
 }TRAIN_METHOD;
+
 typedef struct T_TRAINER{
     TRAIN_METHOD m; // training method
     float e;        // learning rate
@@ -769,18 +789,25 @@ typedef struct T_TRAINER{
     int n;          // maximum number of epoch of whole training set
 }trainer;
 
-param * alloc_param(){
-    return (param*)malloc(sizeof(param));
+
+trainer * alloc_trainer(){
+	return (trainer*)malloc(sizeof(trainer));
 }
 
-param * copy_param(param * p){
-    param * _p = (param*)malloc(sizeof(param));
-    memmove((char*)_p, (char*)p, sizeof(param));
-    return _p;
+void trainer_set_method(trainer * t, TRAIN_METHOD m){
+	t->m = m;
 }
 
-void free_param(param * p){
-    free(p);
+void trainer_set_learning_rate(trainer * t, float e){
+	t->e = e;
+}
+
+void trainer_set_descending_rate(trainer * t, float d){
+	t->d = d;
+}
+
+void trainer_set_max_epoch_num(trainer * t, int n){
+	t->n = n;
 }
 
 // set training dataset and set the input and
@@ -971,7 +998,7 @@ void net_set_output_layer(
 	id = n->d - 1;
 	if(t==NLT_MAX_POOL || t==NLT_MEAN_POOL){
 		// check pool core dimension
-		ASSERT(p->pool_w>0 && p->pool_h>0);
+		ASSERT(p->pool_w>=0 && p->pool_h>=0);
 		ASSERT(p->pool_w<=n->l[id-1].l->l[0]->w);
 		ASSERT(p->pool_h<=n->l[id-1].l->l[0]->h);
 		// pooled layer group
@@ -1025,38 +1052,15 @@ void net_set_output_layer(
 	n->l[n->d-1].p = copy_param(p);
 }
 
-void load_net_model(net * n, const char * file){
-	char c;
-	char str[256];
-	int i;
-	FILE * fp = fopen(file, "rt");
-	// this recommends the net model be initialized with
-	// some training dataset required reasonably
-	ASSERT(fp);
-	ASSERT(n);
-	ASSERT(n->o>0 && n->i.d>0 && n->i.h>0 && n->i.w>0);
-	// get layer number
-	i = 0;
-	while(!feof(fp)){
-		if(fgetc(fp)=='\n'){
-			++i; // layer increments
+int i_str_cmp(const char * s1, const char * s2){
+	int i = 0;
+	while(s1[i]&&s2[i]){
+		if(s1[i]!=s2[i]){
+			break;
 		}
+		++i;
 	}
-	net_set_depth(n, i+1); // add an input layer
-	i = 0;
-	fseek(fp, 0L, SEEK_SET);
-	while(!feof(fp)){
-		ASSERT(i<sizeof(str)-1);
-		str[i] = fgetc(fp);
-		str[i+1] = 0;
-		if(str[i]=='\n'){
-			fprintf(stdout, "%s", str);
-			i = 0;
-		} else {
-			++i;
-		}
-	}
-	fclose(fp);
+	return !!(s1[i]==s2[i]);
 }
 
 #endif

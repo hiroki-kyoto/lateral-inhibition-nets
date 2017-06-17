@@ -17,10 +17,10 @@ int main(int argc, const char ** argv){
 	net_set_data_env(lin, cifar_10_train, 0);
 
 	fprintf(stdout, "====== LOAD NET MODEL ======\n");
-	load_net_model(lin, "lin5.net");
+	load_net_model(lin, "lin.net");
 
 	// free nets
-	//free_net(lin);	
+	free_net(lin);	
 
 	// free datasets
 	free_dataset(cifar_10_train);
@@ -112,7 +112,7 @@ int test()
 	conv_valid(tl, il, g1);
 	DOT("temp layer#1:");
 	print_layer(tl);
-	act(cl, tl, ACT_RLU);
+	act(cl, tl, ACT_RELU);
 	DOT("conv layer#1:");
 	print_layer(cl);
 	// after convolution, apply lateral inhibition immediately
@@ -121,7 +121,7 @@ int test()
 	print_layer(el);
 	DOT("temp lateral inhibited layer#1");
 	print_layer(tll);
-	act(ll, tll, ACT_RLU);
+	act(ll, tll, ACT_RELU);
 	DOT("lateral inhibited layer#1:");
 	print_layer(ll);
 
