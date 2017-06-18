@@ -424,7 +424,11 @@ void softmax(layer_group * l, group * g){
     // to be implemented
 }
 
-void comput_forward(net * n, trainer * t, dataset * d){
+// n : the net
+// t : the trainer
+// d : the dataset
+// i : the index of samples in dataset [d]
+void comput_forward(net * n, trainer * t, dataset * d, int i){
 	// start from the input layer
 	ASSERT(t->n<1024); // epoch num should be reasonable
 	
