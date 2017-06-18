@@ -424,14 +424,31 @@ void softmax(layer_group * l, group * g){
     // to be implemented
 }
 
+
+// compute current layer
+// n : net
+// i : index of current layer to compute over
+void compute_layer(net * n, int i){
+	ASSERT(i>0 && i<n->d);
+	
+}
+
+
 // n : the net
 // t : the trainer
 // d : the dataset
-// i : the index of samples in dataset [d]
-void comput_forward(net * n, trainer * t, dataset * d, int i){
+// return the computing state of next step
+int compute_forward(net * n, trainer * t, dataset * d){
 	// start from the input layer
-	ASSERT(t->n<1024); // epoch num should be reasonable
-	
+	ASSERT(t->n<1024);
+	ASSERT(t->bs>0 && t->bs<=d->n); // check batch size
+	if(t->ei>=t->n){
+		return STT_STOP;
+	}
+	// load sample into the input layer
+	net_load_single_input(n, d, 0);
+
+	return STT_CONTINUE;
 }
 
 

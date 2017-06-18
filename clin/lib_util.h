@@ -40,8 +40,10 @@
 typedef unsigned char byte;
 
 typedef enum E_STATUS{
-    SUCCESS,
-    FAILURE,
+    STT_SUCCESS,
+    STT_FAILURE,
+    STT_CONTINUE,
+    STT_STOP
 }status;
 
 typedef struct T_LABEL{
@@ -469,21 +471,6 @@ layer * alloc_next_layer_with_stacked_filter_group(
     //return alloc_layer(sfg->n, );
 }
 
-void load_input(layer * il, image * im){
-    int i, j, k;
-    ASSERT(il->d==im->d);
-    ASSERT(il->h==im->h);
-    ASSERT(il->w==im->w);
-    for(i=0; i<im->d; ++i){
-        for(j=0; j<im->h; ++j){
-            for(k=0; k<im->w; ++k){
-                il->p[i*il->h*il->w+j*il->w+k] =
-                im->p[i*il->h*il->w+j*il->w+k];
-            }
-        }
-    }
-}
-
 stacked_filter * alloc_stacked_filter(int d){
     stacked_filter * sf;
     int i;
@@ -783,15 +770,30 @@ typedef enum E_TRAIN_METHOD{
 }TRAIN_METHOD;
 
 typedef struct T_TRAINER{
-    TRAIN_METHOD m; // training method
-    float e;        // learning rate
-    float d;        // descending rate of learning rate
-    int n;          // maximum number of epoch of whole training set
+    TRAIN_METHOD m;	// training method
+    float e;		// learning rate
+    float d;		// descending rate of learning rate
+    float ce;		// current learning rate
+    int n;		// max epoch number
+    int bs;		// batch size of each input
+    int ei;		// epoch index
+    int bi;		// batch index
+    int * seq;		// sequence of indexes
 }trainer;
 
 
 trainer * alloc_trainer(){
-	return (trainer*)malloc(sizeof(trainer));
+	trainer * t = (trainer*)malloc(sizeof(trainer));
+	t->m = TM_BP;
+	t->e = 0.1;
+	t->d = 0.01;
+	t->ce = 0;
+	t->n = 0;
+	t->bs = 0;
+	t->ei = 0;
+	t->bi = 0;
+	t->seq = NULL;
+	return t;
 }
 
 void trainer_set_method(trainer * t, TRAIN_METHOD m){
@@ -809,6 +811,45 @@ void trainer_set_descending_rate(trainer * t, float d){
 void trainer_set_max_epoch_num(trainer * t, int n){
 	t->n = n;
 }
+
+void trainer_init_trainer(trainer * t, dataset * d){
+	free(t->seq);	// in case the training set is changed
+	t->seq = (int*)malloc(sizeof(int)*d->n);
+}
+
+typedef enum E_SEQ_GEN_MODE{
+	SGM_RAND,		// completely random
+	SGM_SAME,		// just as the same
+	SGM_BLNC,		// class balanced
+	SGM_BLRD		// balanced but randomized
+}SEQ_GEN_MODE;
+
+int rand1024(){
+	return (int)floor((rand()-1.0)/RAND_MAX*1024);
+}
+
+int big_rand(){
+	return rand1024() + rand1024()*1024 + rand1024()*1024*1024;
+}
+
+int rand_num(int n){
+	return big_rand()%n;
+}
+
+#ifndef BIG_RAND_MAX
+#define BIG_RAND_MAX (1<<30)
+#endif
+
+void trainer_set_seq(trainer * t, dataset * d, SEQ_GEN_MODE sgm){
+	int _i;
+	ASSERT(d->n<BIG_RAND_MAX);
+	if(sgm==SGM_RAND){
+		for(_i=0; _i<d->n; ++_i){
+			t->seq[_i] = rand_num(d->n-i);
+		}
+	}
+}
+
 
 // set training dataset and set the input and
 // output dimensions
@@ -1062,6 +1103,36 @@ int i_str_cmp(const char * s1, const char * s2){
 	}
 	return !!(s1[i]==s2[i]);
 }
+
+
+void load_input(layer * il, image * im){
+    int i, j, k;
+    ASSERT(il->d==im->d);
+    ASSERT(il->h==im->h);
+    ASSERT(il->w==im->w);
+    for(i=0; i<im->d; ++i){
+        for(j=0; j<im->h; ++j){
+            for(k=0; k<im->w; ++k){
+                il->p[i*il->h*il->w+j*il->w+k] =
+                im->p[i*il->h*il->w+j*il->w+k];
+            }
+        }
+    }
+}
+
+// n : net
+// d : dataset
+// i : index of sample in dataset
+// no memory allocation is allowed on training!!!
+void net_load_single_input(net * n, dataset * d, int i){
+	int _i, _j, _k;
+	ASSERT(i>=0 && i<d->n);
+	ASSERT(n->l[0].l->n==d->d);
+	ASSERT(n->l[0].l->l[0]->h==d->h);
+	
+}
+
+
 
 #endif
 
