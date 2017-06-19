@@ -818,10 +818,10 @@ void trainer_init_trainer(trainer * t, dataset * d){
 }
 
 typedef enum E_SEQ_GEN_MODE{
-	SGM_RAND,		// completely random
-	SGM_SAME,		// just as the same
-	SGM_BLNC,		// class balanced
-	SGM_BLRD		// balanced but randomized
+	SGM_RANDOM,		// completely random
+	SGM_LINEAR,		// just as the same
+	SGM_BALANCE,		// class balanced
+	SGM_RANDOM_BALANCE	// balanced but randomized
 }SEQ_GEN_MODE;
 
 int rand1024(){
@@ -829,7 +829,7 @@ int rand1024(){
 }
 
 int big_rand(){
-	return rand1024() + rand1024()*1024 + rand1024()*1024*1024;
+	return rand1024()+rand1024()*1024+rand1024()*1024*1024;
 }
 
 int rand_num(int n){
@@ -840,13 +840,108 @@ int rand_num(int n){
 #define BIG_RAND_MAX (1<<30)
 #endif
 
-void trainer_set_seq(trainer * t, dataset * d, SEQ_GEN_MODE sgm){
-	int _i;
-	ASSERT(d->n<BIG_RAND_MAX);
-	if(sgm==SGM_RAND){
-		for(_i=0; _i<d->n; ++_i){
-			t->seq[_i] = rand_num(d->n-i);
+// using random hash mapping
+void rand_seq(int * s, int n){
+	int _i, _k, i;
+	unsigned char * f = 
+		(unsigned char *)malloc(
+				sizeof(unsigned char)*n);
+	memset(f, 0, sizeof(unsigned char)*n);
+	for(_i=0; _i<d->n; ++_i){
+		i = rand_num(d->n);
+		for(_k=0; _k<d->n; ++_k){
+			if(!f[i+_k]){
+				s[_i] = i+_k;
+				f[i+_k] = 1;
+				break;
+			}
 		}
+	}
+	free(f);
+}
+
+// linear mapping
+void linear_seq(int * s, int n){
+	int _i;
+	for(_i=0; _i<n; ++_i){
+		s[_i] = _i;
+	}
+}
+
+// separate dataset : 
+// 	[We assume the class label is a continuous integer]
+// 	if it is not promised, then do not use this func.
+// ids : the indexes of samples in dataset, 
+// 	all indexes are arranged in row-format
+// 	like : 0-99 means the first class samples
+// 	100-199 means the second class, etc.
+// d : the dataset to separate
+// l_id : label class id
+void separate_dataset(int * ids, dataset * d, int l_id){
+	int hist[256];	// at most 256 classes for labels
+	int _i, _k, _n;
+	memset(hist, 0, sizeof(hist));
+	_n = 0;	// counter for label classes
+	for(_i=0; _i<d->n; ++_i){
+		if(!hist[d->l[_i].data[l_id]]){ // firstly found
+			++_n;
+		}
+		hist[d->l[_i].data[l_id]] ++;
+	}
+	// check if samples are uniformly labeled
+	for(_i=1; _i<_n; ++_i){
+		ASSERT(hist[_i]==hist[0]);
+	}
+	// separation
+	memset(hist, 0, sizeof(hist));
+	for(_i=0; _i<d->n; ++_i){
+		if(d->l[_i].data[c_id]==)// EDIT
+	}
+}
+
+
+// uniformly combine all samples of different class 
+// s : sequence to return
+// d : dataset
+// l_id : label id, the first class label or the second
+void balance_seq(int * s, dataset * d, int l_id){
+	int _i;
+	unsigned char * f = 
+		(unsigned char *)malloc(
+				sizeof(unsigned char)*d->n);
+	ASSERT(l_id>=0 && l_id<=1);
+	memset(f, 0, d->n);
+	for(_i=0; _i<d->n; ++_i){
+		if(d->l[_i].data[l_id] = 
+	}
+}
+
+void random_balance_seq(int * s, dataset * d, int l_id){
+	
+} 
+
+// t : trainer
+// d : dataset
+// l_id : label class id
+// sgm : training sequence generation mode
+void trainer_set_seq(
+		trainer * t, 
+		dataset * d, 
+		int l_id, 
+		SEQ_GEN_MODE sgm
+){
+	ASSERT(d->n<BIG_RAND_MAX);
+	ASSERT(t->seq);
+	if(sgm==SGM_RANDOM){
+		rand_seq(t->seq, d->n);
+	} else if(sgm==SGM_LINEAR){
+		linear_seq(t->seq, d->n);
+	} else if(sgm==SGM_BALANCE){
+		balance_seq(t->seq, d, l_id);
+	} else if(sgm==SGM_RANDOM_BALANCE){
+		random_balance_seq(t->seq, d, l_id);
+	} else {
+		ASSERT(0);
 	}
 }
 
