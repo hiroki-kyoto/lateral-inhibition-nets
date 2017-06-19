@@ -867,56 +867,34 @@ void linear_seq(int * s, int n){
 		s[_i] = _i;
 	}
 }
-
-// separate dataset : 
-// 	[We assume the class label is a continuous integer]
-// 	if it is not promised, then do not use this func.
-// ids : the indexes of samples in dataset, 
-// 	all indexes are arranged in row-format
-// 	like : 0-99 means the first class samples
-// 	100-199 means the second class, etc.
-// d : the dataset to separate
-// l_id : label class id
-void separate_dataset(int * ids, dataset * d, int l_id){
-	int hist[256];	// at most 256 classes for labels
-	int _i, _k, _n;
-	memset(hist, 0, sizeof(hist));
-	_n = 0;	// counter for label classes
-	for(_i=0; _i<d->n; ++_i){
-		if(!hist[d->l[_i].data[l_id]]){ // firstly found
-			++_n;
-		}
-		hist[d->l[_i].data[l_id]] ++;
-	}
-	// check if samples are uniformly labeled
-	for(_i=1; _i<_n; ++_i){
-		ASSERT(hist[_i]==hist[0]);
-	}
-	// separation
-	memset(hist, 0, sizeof(hist));
-	for(_i=0; _i<d->n; ++_i){
-		if(d->l[_i].data[c_id]==)// EDIT
+// functionality: training sequence consists of circulation, within each circulation, each class of instance occurs only once, generate such a sequence districtly according to the order of the dataset, and assign it to trainer->seq.
+// t : trainer, t->seq is returned
+// d : dataset, d->n and d->l are provided
+// n : net, n->lgi and n->o are provided
+void balance_seq(
+	trainer * t,
+	dataset * d,
+	net * n
+){
+	int h[256];
+	int i, k;
+	memset((char*)h, 0, sizeof(h));
+	for(i=0; i<n->o; ++i){
+		k = d->l[i].data[n->lgi];
+		t->seq[k+h[k]*n->o] = i;
+		h[k]++;
 	}
 }
 
-
-// uniformly combine all samples of different class 
-// s : sequence to return
-// d : dataset
-// l_id : label id, the first class label or the second
-void balance_seq(int * s, dataset * d, int l_id){
-	int _i;
-	unsigned char * f = 
-		(unsigned char *)malloc(
-				sizeof(unsigned char)*d->n);
-	ASSERT(l_id>=0 && l_id<=1);
-	memset(f, 0, d->n);
-	for(_i=0; _i<d->n; ++_i){
-		if(d->l[_i].data[l_id] = 
-	}
-}
-
-void random_balance_seq(int * s, dataset * d, int l_id){
+// functionality : using balance strategy, but also randomly chose samples for each circulation in spite of the order in dataset.
+// t : trainer, t->seq is returned
+// d : dataset, d->n and d->l are provided
+// n : net, n->o and n->lgi are provided
+void random_balance_seq(
+	trainer * t,
+	dataset * d,
+	net * n
+){
 	
 } 
 
