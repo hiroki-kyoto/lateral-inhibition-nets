@@ -1,6 +1,10 @@
 #ifndef LIB_UTIL_H
 #define LIB_UTIL_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
 #define PATH_MAX_LEN        1024
 #define LABEL_GROUPS        2
 #define LABEL_CATEGORY      256
@@ -47,24 +51,24 @@ typedef enum E_STATUS{
 }status;
 
 typedef struct T_LABEL{
-    byte data[LABEL_GROUPS];
+    unsigned char data[LABEL_GROUPS];
 }label;
 
 typedef struct T_DATASET{
-    int n;          // number of images
-    int d;          // depth of image
-    int h;          // height of image
-    int w;          // width of image
-    byte * p;       // pixels in row-wise
-    label * l;      // labels of images
+	int n;			// number of images
+	int d;			// depth of image
+	int h;			// height of image
+	int w;			// width of image
+	unsigned char * p;	// pixels in row-wise
+	label * l;		// labels of images
 }dataset;
 
 typedef struct T_IMAGE{
-    int d;          // channel number
-    int h;          // height
-    int w;          // width
-    byte * p;       // pixels of the image
-    label l;        // label of the image
+	int d;		// channel number
+    int h;		// height
+    int w;		// width
+    unsigned char * p;	// pixels of the image
+    label l;		// label of the image
 }image;
 
 typedef struct T_LAYER{
@@ -847,9 +851,9 @@ void rand_seq(int * s, int n){
 		(unsigned char *)malloc(
 				sizeof(unsigned char)*n);
 	memset(f, 0, sizeof(unsigned char)*n);
-	for(_i=0; _i<d->n; ++_i){
-		i = rand_num(d->n);
-		for(_k=0; _k<d->n; ++_k){
+	for(_i=0; _i<n; ++_i){
+		i = rand_num(n);
+		for(_k=0; _k<n; ++_k){
 			if(!f[i+_k]){
 				s[_i] = i+_k;
 				f[i+_k] = 1;
@@ -867,6 +871,7 @@ void linear_seq(int * s, int n){
 		s[_i] = _i;
 	}
 }
+
 // functionality: training sequence consists of circulation, within each circulation, each class of instance occurs only once, generate such a sequence districtly according to the order of the dataset, and assign it to trainer->seq.
 // t : trainer, t->seq is returned
 // d : dataset, d->n and d->l are provided
@@ -895,17 +900,27 @@ void random_balance_seq(
 	dataset * d,
 	net * n
 ){
-	
+	int h[256];
+	int i, k;
+	int * s = (int*)malloc(sizeof(int)*(d->n/n->o));
+	rand_seq(s, d->n/n->o);
+	memset((char*)h, 0, sizeof(h));
+	for(i=0; i<n->o; ++i){
+		k = d->l[i].data[n->lgi];
+		t->seq[k+s[h[k]]*n->o] = i;
+		h[k]++;
+	}
+	free(s);
 } 
 
 // t : trainer
 // d : dataset
-// l_id : label class id
+// n : net
 // sgm : training sequence generation mode
 void trainer_set_seq(
 		trainer * t, 
 		dataset * d, 
-		int l_id, 
+		net * n,
 		SEQ_GEN_MODE sgm
 ){
 	ASSERT(d->n<BIG_RAND_MAX);
@@ -915,9 +930,9 @@ void trainer_set_seq(
 	} else if(sgm==SGM_LINEAR){
 		linear_seq(t->seq, d->n);
 	} else if(sgm==SGM_BALANCE){
-		balance_seq(t->seq, d, l_id);
+		balance_seq(t, d, n);
 	} else if(sgm==SGM_RANDOM_BALANCE){
-		random_balance_seq(t->seq, d, l_id);
+		random_balance_seq(t, d, n);
 	} else {
 		ASSERT(0);
 	}
