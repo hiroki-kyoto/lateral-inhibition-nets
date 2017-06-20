@@ -63,6 +63,23 @@ typedef struct T_DATASET{
 	label * l;		// labels of images
 }dataset;
 
+// a safe way to get pixel from a dataset of images, return a value as type float normalized between 0 and 1.
+// n : the index of image in dataset
+// d : the index of channel
+// h : the row number of pixel
+// w : the column number of pixel
+float dataset_get_pixel_safe(dataset * ds, int n, int d, int h, int w){
+	ASSERT(n>=0 && d>=0 && h>=0 && w>=0);
+	ASSERT(n<ds->n && d<ds->d && h<ds->h && w<ds->w);
+	return ds->p[n*ds->d*ds->h*ds->w+d*ds->h*ds->w+h*ds->w+w]/255.0;
+}
+
+// The macro way for getting pixel value in dataset by given position
+#ifndef D_G_P
+#define D_G_P(_ds, _n, _d, _h, _w) (_ds->p[_n*_ds->d*_ds->h*_ds->w+_d*_ds->h*_ds->w+_h*_ds->w+_w])
+#endif
+
+
 typedef struct T_IMAGE{
 	int d;		// channel number
     int h;		// height
@@ -88,6 +105,31 @@ typedef struct T_LAYER_GROUP{
     int n;
     layer ** l;
 }layer_group;
+
+// functionality: get the pixel value of certain point in a feature map
+float layer_group_get_pixel_safe(layer_group * lg, int n, int d, int h, int w){
+	ASSERT(n>=0 && d>=0 && h>=0 && w>=0);
+	ASSERT(n<lg->n && d<lg->l[0]->d && h<lg->l[0]->h && w<lg->l[0]->w);
+	return lg->l[n]->p[d*lg->l[n]->h*lg->l[n]->w+h*lg->l[n]->w+w];
+}
+
+// macro way for getting pixel in layer group
+#ifndef L_G_P
+#define L_G_P(_lg, _n, _d, _h, _w) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w])
+#endif
+
+// set the pixel of layer group
+float layer_group_set_pixel_safe(float e, layer_group * lg, int n, int d, int h, int w){
+	ASSERT(n>=0 && d>=0 && h>=0 && w>=0);
+	ASSERT(n<lg->n && d<lg->l[0]->d && h<lg->l[0]->h && w<lg->l[0]->w);
+	lg->l[n]->p[d*lg->l[n]->h*lg->l[n]->w+h*lg->l[n]->w+w] = e;
+}
+
+// macro way for setting a pixel in layer group
+#ifndef L_S_P
+#define L_S_P(_lg, _e, _n, _d, _h, _w) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w] = _e)
+#endif
+
 
 typedef struct T_FILTER_GROUP{
     int n;
@@ -1211,13 +1253,22 @@ void load_input(layer * il, image * im){
 // n : net
 // d : dataset
 // i : index of sample in dataset
-// no memory allocation is allowed on training!!!
-void net_load_single_input(net * n, dataset * d, int i){
+void net_load_single_input(
+	net * n, 
+	dataset * d, 
+	int i
+){
 	int _i, _j, _k;
 	ASSERT(i>=0 && i<d->n);
 	ASSERT(n->l[0].l->n==d->d);
 	ASSERT(n->l[0].l->l[0]->h==d->h);
-	
+	for(_i=0; _i<d->d; ++_i){
+		for(_j=0; _j<d->h; ++_j){
+			for(_k=0; _k<d->w; ++_k){
+				L_S_P(n->l[0].l, D_G_P(d, i, _i, _j, _k), _i, 0, _j, _k);
+			}
+		}
+	}
 }
 
 
