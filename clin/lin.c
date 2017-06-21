@@ -18,10 +18,11 @@ int main(int argc, const char ** argv){
 	load_net_model(lin, "lin.net");
 	
 	// step #3:trainer configuration
-	trainer * t = create_trainer(cifar_10_train, lin, SGM_RANDOM, TM_BP, 0.1, 0.01, 100, 1);
-
+	trainer * t = create_trainer(cifar_10_train, lin, SGM_RANDOM_BALANCE, TM_BP, 0.1, 0.01, 100, 1);
+	// training
+	train(lin, t, cifar_10_train);
 	// finalization
-	//free_trainer(t);
+	free_trainer(t);
 	free_net(lin);
 	free_dataset(cifar_10_train);
 	free_dataset(cifar_10_test);

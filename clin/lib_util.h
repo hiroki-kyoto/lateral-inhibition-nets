@@ -48,7 +48,7 @@ typedef enum E_STATUS{
     STT_FAILURE,
     STT_CONTINUE,
     STT_STOP
-}status;
+}STATUS;
 
 typedef struct T_LABEL{
     unsigned char data[LABEL_GROUPS];
@@ -127,7 +127,7 @@ float layer_group_set_pixel_safe(float e, layer_group * lg, int n, int d, int h,
 
 // macro way for setting a pixel in layer group
 #ifndef L_S_P
-#define L_S_P(_lg, _e, _n, _d, _h, _w) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w] = _e)
+#define L_S_P(_lg, _n, _d, _h, _w, _e) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w] = _e)
 #endif
 
 
@@ -160,6 +160,40 @@ typedef struct T_CHANNEL_MERGER_GROUP{
     int d;  // number of channels to merge
     float * p;
 }merger_group;
+
+// safe call to get pixel value of merger group at a given position
+float merger_group_get_pixel_safe(merger_group * _mg, int _n, int _d){
+	ASSERT(_mg);
+	ASSERT(_n>=0 && _n<_mg->n);
+	ASSERT(_d>=0 && _d<_mg->d);
+	return _mg->p[_n*(_mg->d+1)+_d];
+}
+
+// macro way for getting and setting  merger group bias
+// getting pixel from merger group
+#ifndef M_G_P
+#define M_G_P(_mg, _n, _d) (_mg->p[_n*(_mg->d+1)+_d])
+#endif
+// setting bias for merger group
+#ifndef M_S_P
+#define M_S_P(_mg, _n, _d, _b) (_mg->p[_n*(_mg->d+1)+_d] = _b)
+#endif
+
+float merger_group_get_bias_safe(merger_group * _mg, int _n){
+	ASSERT(_mg);
+	ASSERT(_n>=0 && _n<_mg->n);
+	return _mg->p[_n*(_mg->d+1)+_mg->d];
+}
+
+// macro way for getting and setting  merger group bias
+// getting bias from merger group
+#ifndef M_G_B
+#define M_G_B(_mg, _n) (_mg->p[_n*(_mg->d+1)+_mg->d])
+#endif
+// setting bias for merger group
+#ifndef M_S_B
+#define M_S_B(_mg, _n, _b) (_mg->p[_n*(_mg->d+1)+_mg->d] = _b)
+#endif
 
 typedef struct T_CHANNEL_MEGER{
     int d;  // number channels to merge(depth)
@@ -1259,22 +1293,39 @@ void load_input(layer * il, image * im){
 // n : net
 // d : dataset
 // i : index of sample in dataset
-void net_load_single_input(
+// return: 0 means reach the end of training, and 1 means everything is ok.
+int net_load_single_input(
 	net * n, 
 	dataset * d, 
-	int i
+	trainer * t
 ){
-	int _i, _j, _k;
+	int i, _i, _j, _k;
+	ASSERT(t->bi>=0 && t->bi<d->n);
+	i = t->seq[t->bi];
+	if(t->bi==d->n-1){
+		// reach the end of this epoch
+		// try to generate the next the epoch
+		if(t->ei==t->n-1){
+			// reach the end of this training
+			return 0;
+		} else {
+			t->ei++;
+			t->bi=0;
+		}
+	} else {
+		t->bi++;
+	}
 	ASSERT(i>=0 && i<d->n);
 	ASSERT(n->l[0].l->n==d->d);
 	ASSERT(n->l[0].l->l[0]->h==d->h);
 	for(_i=0; _i<d->d; ++_i){
 		for(_j=0; _j<d->h; ++_j){
 			for(_k=0; _k<d->w; ++_k){
-				L_S_P(n->l[0].l, D_G_P(d, i, _i, _j, _k), _i, 0, _j, _k);
+				L_S_P(n->l[0].l, _i, 0, _j, _k, D_G_P(d, i, _i, _j, _k));
 			}
 		}
 	}
+	return 1;
 }
 
 

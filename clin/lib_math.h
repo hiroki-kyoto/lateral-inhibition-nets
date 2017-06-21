@@ -2,7 +2,9 @@
 #ifndef LIB_MATH_H
 #define LIB_MATH_H
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 typedef enum E_ACT_FUNC{
@@ -144,35 +146,42 @@ void lain(layer * nl, layer * el, layer * l, lainer * la){
 // stochastic gradient descending
 // direct classifier: from map to output:LI+SUM
 // try or not : ResNet...
-
-void merger_unit(
-    layer * nl,
-    layer * l,
-    merger_group * mg,
-    int z, // up to depth of nl
-    int y, // up to height of nl
-    int x // up to width of nl
+void merge_unit(
+	layer_group * nl, // net layer group
+	layer_group * l, // layer provided to be operated
+	merger_group * mg, // the merger operator
+	int z, // target channel position of pixel in next layer
+	int y, // target vertical position of pixel in layer
+	int x // target horizontal position of pixel in layer
 ){
-    float sum;
-    int t;
-    sum = mg->p[z*(mg->d+1)+l->d]; //bias
-    for(t=0; t<l->d; ++t){
-        sum += mg->p[z*(mg->d+1)+t]\
-        *l->p[t*l->h*l->w+y*l->w+x];
-    }
-    nl->p[z*nl->h*nl->w+y*nl->w+x] = sum;
+	float sum;
+	int _i, _k;
+	// dimension match?
+	ASSERT(l->n*l->l[0]->d==mg->d);
+	sum = M_G_B(mg, z); //bias
+	for(_i=0; _i<l->n; ++_i){
+		for(_k=0; _k<l->l[0]->d; ++_k){
+			sum += M_G_P(mg, z, _i*l->l[0]->d+_k) * L_G_P(l, _i, _k, y, x);
+		}
+	}
+	L_S_P(nl, z, 0, y, x, sum);
 }
 
-void merge(layer * nl, layer * l, merger_group * mg){
-    int i, k, s;
-    ASSERT(nl->d==mg->n);
-    ASSERT(l->d==mg->d);
-    ASSERT(nl->w==l->w);
-    ASSERT(nl->h==l->h);
-    for(i=0; i<nl->h; ++i){ // parallel-x
-        for(k=0; k<nl->w; ++k){ // parallel-y
-            for(s=0; s<nl->d; ++s){ // parallel-z
-                merger_unit(nl, l, mg, s, i, k);
+void merge(
+	layer_group * nl, 
+	layer_group * l, 
+	merger_group * mg
+){
+	int _i, _j, _k;
+	ASSERT(nl->n==mg->n);
+	ASSERT(nl->l[0]->d==1);
+	ASSERT(l->n*l->l[0]->d==mg->d);
+	ASSERT(nl->l[0]->w==l->l[0]->w);
+	ASSERT(nl->l[0]->h==l->l[0]->h);
+	for(_i=0; _i<nl->n; ++_i){ // parallel-x
+		for(_j=0; _j<nl->l[0]->h; ++_j){ // parallel-y
+			for(_k=0; _k<nl->l[0]->w; ++_k){ // parallel-z
+				merge_unit(nl, l, mg, _i, _j, _k);
             }
         }
     }
@@ -428,28 +437,37 @@ void softmax(layer_group * l, group * g){
 // compute current layer
 // n : net
 // i : index of current layer to compute over
-void compute_layer(net * n, int i){
+void compute_layer(
+	net * n, 
+	trainer * t,  
+	int i
+){ // trainer is only used in batch normalization mode
 	ASSERT(i>0 && i<n->d);
-	
+	if(n->l[i].t==NLT_MERGE){
+		merge(n->l[i].l, n->l[i-1].l, n->l[i].m);
+	} // continue ....
 }
-
 
 // n : the net
 // t : the trainer
 // d : the dataset
 // return the computing state of next step
 int compute_forward(net * n, trainer * t, dataset * d){
-	// start from the input layer
-	ASSERT(t->n<1024);
-	ASSERT(t->bs>0 && t->bs<=d->n); // check batch size
-	if(t->ei>=t->n){
-		return STT_STOP;
-	}
+	int _i, _s;
+	char _str[256];
 	// load sample into the input layer
-	
-	net_load_single_input(n, d, 0);
-
-	return STT_CONTINUE;
+	_s = net_load_single_input(n, d, t);
+	// compute all layer from input to output
+	for(_i=1; _i<n->d; ++_i){
+		compute_layer(n, t, _i);
+	}
+	if(!_s){
+		sprintf(_str, "An instance of training with %d epoches of %d samples finished!\n", t->n, d->n);
+		DOT(_str);
+		return STT_STOP;
+	} else {
+		return STT_CONTINUE;
+	}
 }
 
 // trainer configuration once for all
@@ -477,7 +495,21 @@ trainer * create_trainer(
 	return t;
 }
 
-
+// training
+void train(
+	net * n, 
+	trainer * t,
+	dataset * d
+){
+	char str[256];
+	STATUS stt;
+	while(stt!=STT_STOP){
+		sprintf(str, "EPOCH:%d\tBATCH:%d.\n", t->ei, t->bi);
+		DOT(str); 
+		stt = compute_forward(n, t, d);
+		// compute_back();
+	}
+}
 
 #endif
 
