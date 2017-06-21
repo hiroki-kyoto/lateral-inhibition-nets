@@ -842,6 +842,11 @@ trainer * alloc_trainer(){
 	return t;
 }
 
+void free_trainer(trainer * t){
+	free(t->seq);
+	free(t);
+}
+
 void trainer_set_method(trainer * t, TRAIN_METHOD m){
 	t->m = m;
 }
@@ -858,7 +863,7 @@ void trainer_set_max_epoch_num(trainer * t, int n){
 	t->n = n;
 }
 
-void trainer_init_trainer(trainer * t, dataset * d){
+void trainer_init(trainer * t, dataset * d){
 	free(t->seq);	// in case the training set is changed
 	t->seq = (int*)malloc(sizeof(int)*d->n);
 }
@@ -888,7 +893,7 @@ int rand_num(int n){
 
 // using random hash mapping
 void rand_seq(int * s, int n){
-	int _i, _k, i;
+	int _i, _k, i, k;
 	unsigned char * f = 
 		(unsigned char *)malloc(
 				sizeof(unsigned char)*n);
@@ -896,9 +901,10 @@ void rand_seq(int * s, int n){
 	for(_i=0; _i<n; ++_i){
 		i = rand_num(n);
 		for(_k=0; _k<n; ++_k){
-			if(!f[i+_k]){
-				s[_i] = i+_k;
-				f[i+_k] = 1;
+			k = (i+_k)%n;
+			if(!f[k]){
+				s[_i] = k;
+				f[k] = 1;
 				break;
 			}
 		}

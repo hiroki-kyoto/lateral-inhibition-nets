@@ -446,9 +446,35 @@ int compute_forward(net * n, trainer * t, dataset * d){
 		return STT_STOP;
 	}
 	// load sample into the input layer
+	
 	net_load_single_input(n, d, 0);
 
 	return STT_CONTINUE;
+}
+
+// trainer configuration once for all
+// [*] initialization order is :
+// [*] dataset
+// [*] net
+// [*] trainer
+trainer * create_trainer(
+	dataset * ds,
+	net * nt,
+	SEQ_GEN_MODE sgm,
+	TRAIN_METHOD m,
+	float e,// learning rate
+	float d,// learning descending rate
+	float n,// number of total epoches to train
+	float bs//batch size
+){	
+	trainer * t = alloc_trainer();
+	trainer_set_method(t, m);
+	trainer_set_learning_rate(t, e);
+	trainer_set_descending_rate(t, d);
+	trainer_set_max_epoch_num(t, n);
+	trainer_init(t, ds);
+	trainer_set_seq(t, ds, nt, sgm);
+	return t;
 }
 
 

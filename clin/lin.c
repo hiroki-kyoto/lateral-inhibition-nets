@@ -3,26 +3,26 @@
 #include "lib_math.h"
 
 
-int main(int argc, const char ** argv){
-	net * lin = alloc_net();
-	
+int main(int argc, const char ** argv){	
+	// step #1:dataset initialization
 	fprintf(stdout, "====== LOAD DATASET ========\n");
 	dataset * cifar_10_train = get_cifar_10_train();
 	fprintf(stdout, "CIFAR-10 TRAINING DATA READ OK.\n");
-	
 	dataset * cifar_10_test = get_cifar_10_test();
 	fprintf(stdout, "CIFAR-10 TEST DATA READ OK.\n");
 
-	// set dataset to the net
+	// step #2:net construction
+	net * lin = alloc_net();
 	net_set_data_env(lin, cifar_10_train, 0);
-
 	fprintf(stdout, "====== LOAD NET MODEL ======\n");
 	load_net_model(lin, "lin.net");
+	
+	// step #3:trainer configuration
+	trainer * t = create_trainer(cifar_10_train, lin, SGM_RANDOM, TM_BP, 0.1, 0.01, 100, 1);
 
-	// free nets
-	free_net(lin);	
-
-	// free datasets
+	// finalization
+	//free_trainer(t);
+	free_net(lin);
 	free_dataset(cifar_10_train);
 	free_dataset(cifar_10_test);
 
