@@ -79,6 +79,23 @@ float dataset_get_pixel_safe(dataset * ds, int n, int d, int h, int w){
 #define D_G_P(_ds, _n, _d, _h, _w) (_ds->p[_n*_ds->d*_ds->h*_ds->w+_d*_ds->h*_ds->w+_h*_ds->w+_w])
 #endif
 
+// safe way to get the label of the specified imge in database
+float dataset_get_label_safe(
+	dataset * _ds,
+	int _c,	// label class id(parent is 0, child is 1)
+	int _i, // sample id
+	int _k // label index
+){
+	ASSERT(_ds);
+	ASSERT(_c>=0 && _c<2);
+	ASSERT(_i>=0 && _i<_ds->n);
+	return (_ds->l[_i].data[_c]==_k);
+}
+
+// inline way to get label
+#ifndef D_G_L
+#define D_G_L(_ds, _c, _i, _k) (_ds->l[_i].data[_c]==_k)
+#endif
 
 typedef struct T_IMAGE{
 	int d;		// channel number
@@ -805,7 +822,6 @@ typedef struct T_PARAM{
     int acti_f; // activation function(ReLU,Sigmoid,...)
 }param;
 
-
 // parameters
 param * alloc_param(){
     return (param*)malloc(sizeof(param));
@@ -824,6 +840,7 @@ void free_param(param * p){
 typedef struct T_NEURAL_LAYER{
 	neural_layer_type t;    // neural layer type
 	layer_group * l;    	// layers
+	layer_group * e; // layers of error partial gradient
 	param * p;  		// given params
 	group * g;  		// trainable params
 	merger_group * m;	// trainable merger params
@@ -845,28 +862,27 @@ typedef struct T_NET{
 
 // training staff
 typedef enum E_TRAIN_METHOD{
-    TM_BP,
-    TM_SGD
+	TM_SGD,
+	TM_ADA_DELTA
 }TRAIN_METHOD;
 
 typedef struct T_TRAINER{
-    TRAIN_METHOD m;	// training method
-    float e;		// learning rate
-    float d;		// descending rate of learning rate
-    float ce;		// current learning rate
-    int n;		// max epoch number
-    int bs;		// batch size of each input
-    int ei;		// epoch index
-    int bi;		// batch index
-    int * seq;		// sequence of indexes
+	TRAIN_METHOD m; // training method
+	float e; // learning rate
+	float d; // descending rate of learning rate
+	float ce; // current learning rate
+	int n; // max epoch number
+	int bs; // batch size of each input
+	int ei; // epoch index
+	int bi; // batch index
+	int li; // last sample index
+	int * seq; // sequence of indexes
 }trainer;
-
 
 trainer * alloc_trainer(){
 	trainer * t = (trainer*)malloc(sizeof(trainer));
-	t->m = TM_BP;
-	t->e = 0.1;
-	t->d = 0.01;
+	t->e = 0;
+	t->d = 0;
 	t->ce = 0;
 	t->n = 0;
 	t->bs = 0;
@@ -887,6 +903,7 @@ void trainer_set_method(trainer * t, TRAIN_METHOD m){
 
 void trainer_set_learning_rate(trainer * t, float e){
 	t->e = e;
+	t->ce = t->e;
 }
 
 void trainer_set_descending_rate(trainer * t, float d){
@@ -895,6 +912,11 @@ void trainer_set_descending_rate(trainer * t, float d){
 
 void trainer_set_max_epoch_num(trainer * t, int n){
 	t->n = n;
+	t->bi = 0;
+}
+
+void trainer_set_batch_size(trainer * t, int bs){
+	t->bs = bs;
 }
 
 void trainer_init(trainer * t, dataset * d){
@@ -1080,6 +1102,7 @@ void net_set_depth(net * n, int d){
 	// construct the input neural layer
 	n->l[0].t = NLT_INPUT;
 	n->l[0].l = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
+	n->l[0].e = alloc_layer_group(n->i.d, 1, n->i.h, n->i.w);
 	n->l[0].p = NULL;
 }
 
@@ -1098,9 +1121,16 @@ void net_set_layer(
 			p->conv_n, 
 			p->conv_h, 
 			p->conv_w
-		);
+		);		
 		// single layer for convolution
 		n->l[id].l = alloc_layer_group(
+			p->conv_n,
+			n->l[id-1].l->n * n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h - p->conv_h + 1,
+			n->l[id-1].l->l[0]->w - p->conv_w + 1
+		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
 			p->conv_n,
 			n->l[id-1].l->n * n->l[id-1].l->l[0]->d,
 			n->l[id-1].l->l[0]->h - p->conv_h + 1,
@@ -1122,6 +1152,12 @@ void net_set_layer(
 			n->l[id-1].l->l[0]->h - p->conv_h + 1,
 			n->l[id-1].l->l[0]->w - p->conv_w + 1
 		);
+		n->l[id].e = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h - p->conv_h + 1,
+			n->l[id-1].l->l[0]->w - p->conv_w + 1
+		);
 	} else if(t==NLT_LAIN){
 		ASSERT(p->lain_r>0);
 		// create distrainable filter group
@@ -1133,6 +1169,13 @@ void net_set_layer(
 		make_lain_filter_group(n->l[id].g, p->lain_r);
 		// the same size of last layer
 		n->l[id].l = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
 			n->l[id-1].l->n,
 			n->l[id-1].l->l[0]->d,
 			n->l[id-1].l->l[0]->h,
@@ -1155,6 +1198,12 @@ void net_set_layer(
 			n->l[id-1].l->l[0]->h,
 			n->l[id-1].l->l[0]->w
 		);
+		n->l[id].e = alloc_layer_group(
+			p->merg_n,
+			1,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
 	} else if(t==NLT_MAX_POOL || t==NLT_MEAN_POOL){
 		ASSERT(p->pool_w>=0 && p->pool_h>=0);
 		ASSERT(p->pool_w<=n->l[id-1].l->l[0]->w);
@@ -1172,6 +1221,13 @@ void net_set_layer(
 			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
 			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
 		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
+			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
+		);
 	} else if(t==NLT_INPUT){
 		ASSERT(0); // in no case this can be executed
 	} else if(t==NLT_FULL_CONN){
@@ -1184,6 +1240,13 @@ void net_set_layer(
 		);
 		// final map is 1x1 sized
 		n->l[id].l = alloc_layer_group(
+			p->full_n,
+			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
+			1,
+			1
+		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
 			p->full_n,
 			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
 			1,
@@ -1226,6 +1289,13 @@ void net_set_output_layer(
 			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
 			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
 		);
+		// pooled error partial gradient
+		n->l[id].e = alloc_layer_group(
+			n->l[id-1].l->n,
+			n->l[id-1].l->l[0]->d,
+			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
+			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
+		);
 		// match the output dimension?
 		// to ensure this, plz add a merger
 		// group before such output layer
@@ -1245,6 +1315,13 @@ void net_set_output_layer(
 		);
 		// create layer
 		n->l[id].l = alloc_layer_group(
+			p->merg_n,
+			1,
+			n->l[id-1].l->l[0]->h,
+			n->l[id-1].l->l[0]->w
+		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
 			p->merg_n,
 			1,
 			n->l[id-1].l->l[0]->h,
@@ -1302,6 +1379,7 @@ int net_load_single_input(
 	int i, _i, _j, _k;
 	ASSERT(t->bi>=0 && t->bi<d->n);
 	i = t->seq[t->bi];
+	t->li = i; // save last index id
 	if(t->bi==d->n-1){
 		// reach the end of this epoch
 		// try to generate the next the epoch

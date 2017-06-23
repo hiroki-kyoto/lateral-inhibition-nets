@@ -444,8 +444,11 @@ void compute_layer(
 ){ // trainer is only used in batch normalization mode
 	ASSERT(i>0 && i<n->d);
 	if(n->l[i].t==NLT_MERGE){
+		DOT("merge");
 		merge(n->l[i].l, n->l[i-1].l, n->l[i].m);
-	} // continue ....
+	} else if(n->l[i].t==NLT_CONV_NORMAL){
+		//conv(n->l[i].l, n->l[i-1].l, n->l[i].g);
+	}
 }
 
 // n : the net
@@ -480,19 +483,92 @@ trainer * create_trainer(
 	net * nt,
 	SEQ_GEN_MODE sgm,
 	TRAIN_METHOD m,
-	float e,// learning rate
-	float d,// learning descending rate
-	float n,// number of total epoches to train
-	float bs//batch size
+	float e, // learning rate
+	float d, // learning descending rate
+	float n, // number of total epoches to train
+	float bs // batch size
 ){	
 	trainer * t = alloc_trainer();
 	trainer_set_method(t, m);
 	trainer_set_learning_rate(t, e);
 	trainer_set_descending_rate(t, d);
 	trainer_set_max_epoch_num(t, n);
+	trainer_set_batch_size(t, bs);
 	trainer_init(t, ds);
 	trainer_set_seq(t, ds, nt, sgm);
 	return t;
+}
+
+// compute gradient and store them on layers, then update the trainable parameters
+void desc_layer(
+	net * n,
+	trainer * t,
+	int i // the current layer to descend the gradient back
+){
+	if(n->l[i].t==NLT_MERGE){
+		//  
+	}
+}
+
+// update learning rate in trainer
+// t : trainer
+// e : current training error
+void trainer_update_learning_rate(trainer * t, float e){
+	if(t->m==TM_SGD){
+		t->ce = (1 - t->d) * t->ce;
+	} else if(t->m==TM_ADA_DELTA){
+		DOT("NOT SUPPORTED YET!\n");
+		ASSERT(0);
+	} else {
+		DOT("CONFIGURE ERROR!\n");
+		ASSERT(0);
+	}
+}
+
+
+// return the current output error
+float compute_back(
+	net * n,
+	trainer * t,
+	dataset * d
+){
+	// compute the overrall error
+	float _e; // total error
+	float _t; // temp
+	int _i; // output index
+
+	// compute the partial gradient
+	for(_i=0; _i<n->o; ++_i){
+		_t = L_G_P(n->l[n->d-1].l, _i, 0, 0, 0) - D_G_L(d, n->lgi, t->li, _i);
+		L_S_P(n->l[n->d-1].e, _i, 0, 0, 0, _t);
+		_e += _t * _t;
+	}
+	_e = 0.5 * _e / n->o;
+	
+	// update learnning rate
+	trainer_update_learning_rate(t, _e);
+
+	// compute the error partial gradients descending the layers
+	for(_i=n->d-1; _i>0; --_i){
+		desc_layer(n, t, _i);
+	}
+	return _e;
+}
+
+// initialization of net
+typedef enum E_NET_INIT_METHOD{
+	NIM_RANDOM_ZERO,
+	NIM_RANDOM_ONE
+}NET_INIT_METHOD;
+
+// a rule to keep: all parameters summarized as 1.0
+// in a single layer
+void net_init(net * n, NET_INIT_METHOD m){
+	if(m==NIM_RANDOM_ZERO){
+		// each is randomized between -1 and 1 
+	} else if(m==NIM_RANDOM_ZERO){
+		// each is randomized between 0 and 1 
+	}
 }
 
 // training
@@ -503,13 +579,18 @@ void train(
 ){
 	char str[256];
 	STATUS stt;
+	float err;
 	while(stt!=STT_STOP){
 		sprintf(str, "EPOCH:%d\tBATCH:%d.\n", t->ei, t->bi);
 		DOT(str); 
 		stt = compute_forward(n, t, d);
-		// compute_back();
+		err = compute_back(n, t, d);
+		sprintf(str, "CURRENT ERROR:%f.\n", err);
 	}
 }
+
+
+
 
 #endif
 
