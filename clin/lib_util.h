@@ -36,8 +36,13 @@
 	}\
 }
 
-#define DOT(x){\
-	fprintf(stdout, "MSG@%s#%d:%s\n", __FILE__, __LINE__, x);\
+#define DOT(str){\
+	fprintf(stdout, "MSG@%s#%d:%s\n", __FILE__, __LINE__, str);\
+	fflush(stdout);\
+}
+
+#define DEBUG(str, ...) {\
+	fprintf(stdout, str, ##__VA_ARGS__);\
 	fflush(stdout);\
 }
 
@@ -1410,6 +1415,34 @@ void net_set_output_layer(
 		ASSERT(n->l[id].l->n==n->o);
 		ASSERT(n->l[id].l->l[0]->h==1);
 		ASSERT(n->l[id].l->l[0]->w==1);
+	} else if(t==NLT_FULL_CONN){
+		// full conn is a special case for conv
+		// create filter group
+		n->l[id].g = alloc_group(
+			p->full_n, 
+			n->l[id-1].l->l[0]->h, 
+			n->l[id-1].l->l[0]->w
+		);
+		// final map is 1x1 sized
+		n->l[id].l = alloc_layer_group(
+			p->full_n,
+			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
+			1,
+			1
+		);
+		// error partial gradient
+		n->l[id].e = alloc_layer_group(
+			p->full_n,
+			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
+			1,
+			1
+		);
+		// check dimension
+		// matches the output dimension?
+		ASSERT(n->l[id].l->n==n->o);
+		ASSERT(n->l[id].l->l[0]->d==1);
+		ASSERT(n->l[id].l->l[0]->h==1);
+		ASSERT(n->l[id].l->l[0]->w==1);	
 	} else if(t==NLT_SOFTMAX){
 		ASSERT(0); // currently not applicable
 	} else {

@@ -408,6 +408,22 @@ void load_net_model(net * n, const char * file){
 						p
 					);
 				}
+			} else if(t=="full_conn"){
+				p->full_n = d;
+				if(k==n->d-1){
+					net_set_output_layer(
+						n,
+						NLT_FULL_CONN,
+						p
+					);
+				} else {
+					net_set_layer(
+						n, 
+						k, 
+						NLT_FULL_CONN, 
+						p
+					);
+				}
 			} else if(t=="softmax"){
 				// not applicabel yet
 				DOT("SOFTMAX not applicable yet!\n");
@@ -577,15 +593,19 @@ void neural_layer_init(
 			M_S_B(l->m, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 		}
 	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){
+		ASSERT(l);
+		DOT("l is done!\n");
+		ASSERT(l->g);
+		DEBUG("filter group depth:%d\n", l->g->n);
 		// convolution filter param init
-		for(_i=0; _i<l->g->n; ++_i){
+		/*for(_i=0; _i<l->g->n; ++_i){
 			for(_j=0; _j<l->g->h; ++_j){
 				for(_k=0; _k<l->g->w; ++_k){
-					F_S_P(l->g, _i, _j, _k, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+					//F_S_P(l->g, _i, _j, _k, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 				}
 			}
-			F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
-		}
+			//F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+		}*/
 	}
 }
 
@@ -595,7 +615,7 @@ void net_init(net * n, NET_INIT_METHOD m){
 	if(m==NIM_RANDOM_ZERO){
 		// each is randomized between -1 and 1 
 		for(_i=1; _i<n->d; ++_i){
-			//neural_layer_init(n->l+_i, -1, 1);
+			neural_layer_init(n->l+_i, -1, 1);
 		}
 	} else if(m==NIM_RANDOM_ZERO){
 		// each is randomized between 0 and 1 
