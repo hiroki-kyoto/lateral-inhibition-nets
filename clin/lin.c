@@ -16,7 +16,7 @@ int main(int argc, const char ** argv){
 	net_set_data_env(lin, cifar_10_train, 0);
 	fprintf(stdout, "====== LOAD NET MODEL ======\n");
 	load_net_model(lin, "lin.net");
-	
+	net_init(lin, NIM_RANDOM_ZERO);
 	// step #3:trainer configuration
 	trainer * t = create_trainer(cifar_10_train, lin, SGM_RANDOM_BALANCE, TM_SGD, 0.1, 0.01, 100, 1);
 	// training

@@ -155,6 +155,72 @@ typedef struct T_FILTER_GROUP{
     float * p;  // weight vector and its bias
 }group;
 
+float filter_group_get_pixel_safe(
+	group * _f,
+	int _n,
+	int _h,
+	int _w
+){
+	ASSERT(_f);
+	ASSERT(_n>=0 && _n<_f->n);
+	ASSERT(_h>=0 && _n<_f->h);
+	ASSERT(_w>=0 && _n<_f->w);
+	return _f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w];
+}
+
+// inline code for get parameters in filter group
+#ifndef F_G_P
+#define F_G_P(_f, _n, _h, _w) (_f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w])
+#endif
+
+void filter_group_set_pixel_safe(
+	group * _f,
+	int _n,
+	int _h,
+	int _w,
+	float _v
+){
+	ASSERT(_f);
+	ASSERT(_n>=0 && _n<_f->n);
+	ASSERT(_h>=0 && _n<_f->h);
+	ASSERT(_w>=0 && _n<_f->w);
+	_f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w] = _v;
+}
+
+// inline code for get parameters in filter group
+#ifndef F_S_P
+#define F_S_P(_f, _n, _h, _w, _v) (_f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w]=_v)
+#endif
+
+float filter_group_get_bias_safe(
+	group * _f,
+	int _n
+){
+	ASSERT(_f);
+	ASSERT(_n>=0 && _n<_f->n);
+	return _f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w];
+}
+
+// inline code for get parameters in filter group
+#ifndef F_G_B
+#define F_G_B(_f, _n) (_f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w])
+#endif
+
+void filter_group_set_bias_safe(
+	group * _f,
+	int _n,
+	float _v
+){
+	ASSERT(_f);
+	ASSERT(_n>=0 && _n<_f->n);
+	_f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w] = _v;
+}
+
+// inline code for get parameters in filter group
+#ifndef F_S_B
+#define F_S_B(_f, _n, _v) (_f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w]=_v)
+#endif
+
 typedef struct T_FILTER{
     int h;
     int w;
@@ -186,20 +252,33 @@ float merger_group_get_pixel_safe(merger_group * _mg, int _n, int _d){
 	return _mg->p[_n*(_mg->d+1)+_d];
 }
 
+void merger_group_set_pixel_safe(merger_group * _mg, int _n, int _d, float _v){
+	ASSERT(_mg);
+	ASSERT(_n>=0 && _n<_mg->n);
+	ASSERT(_d>=0 && _d<_mg->d);
+	_mg->p[_n*(_mg->d+1)+_d] = _v;
+}
+
 // macro way for getting and setting  merger group bias
 // getting pixel from merger group
 #ifndef M_G_P
 #define M_G_P(_mg, _n, _d) (_mg->p[_n*(_mg->d+1)+_d])
 #endif
-// setting bias for merger group
+// setting pixel for merger group
 #ifndef M_S_P
-#define M_S_P(_mg, _n, _d, _b) (_mg->p[_n*(_mg->d+1)+_d] = _b)
+#define M_S_P(_mg, _n, _d, _v) (_mg->p[_n*(_mg->d+1)+_d] = _v)
 #endif
 
 float merger_group_get_bias_safe(merger_group * _mg, int _n){
 	ASSERT(_mg);
 	ASSERT(_n>=0 && _n<_mg->n);
 	return _mg->p[_n*(_mg->d+1)+_mg->d];
+}
+
+void merger_group_set_bias_safe(merger_group * _mg, int _n, float _b){
+	ASSERT(_mg);
+	ASSERT(_n>=0 && _n<_mg->n);
+	_mg->p[_n*(_mg->d+1)+_mg->d] = _b;
 }
 
 // macro way for getting and setting  merger group bias

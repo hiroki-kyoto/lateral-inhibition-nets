@@ -561,13 +561,47 @@ typedef enum E_NET_INIT_METHOD{
 	NIM_RANDOM_ONE
 }NET_INIT_METHOD;
 
-// a rule to keep: all parameters summarized as 1.0
-// in a single layer
+// neural layer parameter initialization
+void neural_layer_init(
+	neural_layer * l,
+	float f_min,
+	float f_max
+){
+	int _i, _j, _k;
+	if(l->t==NLT_MERGE){
+		// merger param init
+		for(_i=0; _i<l->m->n; ++_i){
+			for(_j=0; _j<l->m->d; ++_j){
+				M_S_P(l->m, _i, _j, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+			}
+			M_S_B(l->m, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+		}
+	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){
+		// convolution filter param init
+		for(_i=0; _i<l->g->n; ++_i){
+			for(_j=0; _j<l->g->h; ++_j){
+				for(_k=0; _k<l->g->w; ++_k){
+					F_S_P(l->g, _i, _j, _k, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+				}
+			}
+			F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+		}
+	}
+}
+
+// parameter initialization
 void net_init(net * n, NET_INIT_METHOD m){
+	int _i;
 	if(m==NIM_RANDOM_ZERO){
 		// each is randomized between -1 and 1 
+		for(_i=1; _i<n->d; ++_i){
+			//neural_layer_init(n->l+_i, -1, 1);
+		}
 	} else if(m==NIM_RANDOM_ZERO){
 		// each is randomized between 0 and 1 
+		for(_i=1; _i<n->d; ++_i){
+			//neural_layer_init(n->l+_i, 0, 1);
+		}
 	}
 }
 
@@ -586,6 +620,7 @@ void train(
 		stt = compute_forward(n, t, d);
 		err = compute_back(n, t, d);
 		sprintf(str, "CURRENT ERROR:%f.\n", err);
+		DOT(str);
 	}
 }
 
