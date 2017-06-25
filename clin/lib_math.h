@@ -430,8 +430,21 @@ void desc_layer(
 	trainer * t,
 	int i 
 ){
-	int _i, _k, _s, _t, _x;
-	float _sum;
+	int _i, _k, _s, _t, _v;
+	
+	int _f;	// activation function
+	int _n[2];	// number of layers in n->l[i-1] and n->l[i]
+	int _d[2];	// number of channels
+	int _h[2];	// height of layers
+	int _w[2];	// width of layers
+	
+	float _sum;	// summation
+	float _dy;	// dy[i]
+	float _y;	// y[i]
+	float _dx;	// dx[i] = dy[i-1]
+	float _x;	// x[i] = y[i-1]
+	float _p;	// pixel in merger or filter
+	float _b;	// bias in merger or filter
 
 	ASSERT(i>0 && i<n->d);
 	
@@ -442,9 +455,13 @@ void desc_layer(
 				for(_s=0; _s<n->l[i-1].e->l[0]->h; ++_s){
 					for(_t=0; _t<n->l[i-1].e->l[0]->w; ++_t){
 						_sum = 0;
-						for(_x=0; _x<n->l[i].l->n; ++_x){
+						for(_v=0; _v<n->l[i].l->n; ++_v){
+							_y = L_G_P(n->l[i].l, _v, 0, _s, _t);
+							_dy = L_G_P(n->l[i].e, _v, 0, _s, _t);
 							if(n->l[i].p->acti_f==ACT_RELU){
-								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t)
+								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t) * (L_G_P(n->l[i].l, _x, 0, _s, _t)>0) * M_G_P(n->l[i].m, _x, _i*n->l[i-1].l->l[0]->d + _k);
+							} else if(n->l[i].p->acti_f==ACT_SIGMOID){
+								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t) * 
 							}
 						}
 						L_S_P(n->l[i-1].e, _i, _k, _s, _t, _sum);
