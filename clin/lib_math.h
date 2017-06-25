@@ -303,129 +303,37 @@ void load_net_model(net * n, const char * file){
 			if(i_str_cmp(t, "merge")){
 				p->merg_n = d;
 				p->acti_f = a;
-				if(k==n->d-1){ // output layer
-					net_set_output_layer(
-						n, 
-						NLT_MERGE, 
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_MERGE, 
-						p
-					);
-				}
-			} else if(i_str_cmp(t, "conv")){				
+				net_set_layer(n, k, NLT_MERGE, p);
+			} else if(i_str_cmp(t, "conv")){
 				p->conv_n = d;
 				p->conv_h = h;
 				p->conv_w = w;
 				p->acti_f = a;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n, 
-						NLT_CONV_NORMAL,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_CONV_NORMAL, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_CONV_NORMAL, p);
 			} else if(i_str_cmp(t, "pool_max")){
 				p->pool_h = d;
 				p->pool_w = h;
 				p->acti_f = a;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n,
-						NLT_MAX_POOL,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_MAX_POOL, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_MAX_POOL, p);	
 			} else if(i_str_cmp(t, "lain")){
 				p->lain_r = d;
 				p->acti_f = a;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n,
-						NLT_LAIN,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_LAIN, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_LAIN, p);
 			} else if(i_str_cmp(t, "conv_comb")){
 				p->conv_n = d;
 				p->conv_h = h;
 				p->conv_w = w;
 				p->acti_f = a;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n,
-						NLT_CONV_COMBINED,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_CONV_COMBINED, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_CONV_COMBINED, p);
 			} else if(t=="pool_mean"){
 				p->pool_h = d;
 				p->pool_w = h;
 				p->acti_f = a;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n,
-						NLT_MEAN_POOL,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_MEAN_POOL, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_MEAN_POOL, p);
 			} else if(t=="full_conn"){
 				p->full_n = d;
-				if(k==n->d-1){
-					net_set_output_layer(
-						n,
-						NLT_FULL_CONN,
-						p
-					);
-				} else {
-					net_set_layer(
-						n, 
-						k, 
-						NLT_FULL_CONN, 
-						p
-					);
-				}
+				net_set_layer(n, k, NLT_FULL_CONN, p);
 			} else if(t=="softmax"){
-				// not applicabel yet
 				DOT("SOFTMAX not applicable yet!\n");
 				ASSERT(0);
 			} else {
@@ -519,10 +427,19 @@ trainer * create_trainer(
 void desc_layer(
 	net * n,
 	trainer * t,
-	int i // the current layer to descend the gradient back
+	int i 
 ){
+	int _i, _j, _k;
 	if(n->l[i].t==NLT_MERGE){
-		//  
+		for(_i=0; _i<l[i].m->n; ++_i){
+			for(_j=0; _j<l[i].m->d; ++_j){
+				if(n->l[i].p->acti_f==ACT_RELU){
+					
+				} else if(n->l[i].p->acti_f==ACT_SIGMOID){
+					// not supported yet
+				}
+			}
+		}
 	}
 }
 
@@ -568,6 +485,7 @@ float compute_back(
 	for(_i=n->d-1; _i>0; --_i){
 		desc_layer(n, t, _i);
 	}
+
 	return _e;
 }
 
@@ -584,7 +502,7 @@ void neural_layer_init(
 	float f_max
 ){
 	int _i, _j, _k;
-	if(l->t==NLT_MERGE){DEBUG("=====MERGE=====\n");
+	if(l->t==NLT_MERGE){
 		// merger param init
 		for(_i=0; _i<l->m->n; ++_i){
 			for(_j=0; _j<l->m->d; ++_j){
@@ -592,22 +510,15 @@ void neural_layer_init(
 			}
 			M_S_B(l->m, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 		}
-	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){DEBUG("==CONV/FULL==\n");
-		ASSERT(l);
-		DEBUG("l is done!");
-		ASSERT(l->g);
-		DEBUG("filter group depth:%d\n", l->g->n);
-		// convolution filter param init
-		/*for(_i=0; _i<l->g->n; ++_i){
+	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){
+		for(_i=0; _i<l->g->n; ++_i){
 			for(_j=0; _j<l->g->h; ++_j){
 				for(_k=0; _k<l->g->w; ++_k){
-					//F_S_P(l->g, _i, _j, _k, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+					F_S_P(l->g, _i, _j, _k, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 				}
 			}
-			//F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
-		}*/
-	} else {
-		DEBUG("NO_TRAINABLE_VARS\n");
+			F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
+		}
 	}
 }
 
@@ -622,7 +533,7 @@ void net_init(net * n, NET_INIT_METHOD m){
 	} else if(m==NIM_RANDOM_ZERO){
 		// each is randomized between 0 and 1 
 		for(_i=1; _i<n->d; ++_i){
-			//neural_layer_init(n->l+_i, 0, 1);
+			neural_layer_init(n->l+_i, 0, 1);
 		}
 	}
 }

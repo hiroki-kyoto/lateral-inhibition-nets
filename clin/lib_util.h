@@ -1196,7 +1196,7 @@ void net_set_layer(
 	neural_layer_type t, 
 	param * p
 ){
-	ASSERT(id>0 && id<n->d-1);
+	ASSERT(id>0 && id<n->d);
 	n->l[id].t = t;
 	
 	if(t==NLT_CONV_NORMAL){
@@ -1219,7 +1219,7 @@ void net_set_layer(
 			n->l[id-1].l->n * n->l[id-1].l->l[0]->d,
 			n->l[id-1].l->l[0]->h - p->conv_h + 1,
 			n->l[id-1].l->l[0]->w - p->conv_w + 1
-		);
+		);	
 	} else if(t==NLT_CONV_COMBINED){
         	// make sure it keeps the dimension of channel
 		ASSERT(p->conv_n==n->l[id-1].l->n);
@@ -1345,111 +1345,13 @@ void net_set_layer(
 	}
 	// copy params to current layer
 	n->l[id].p = copy_param(p);
-}
-
-void net_set_output_layer(
-	net * n, 
-	neural_layer_type t, 
-	param * p
-){
-	int id;
-	id = n->d - 1;
-	if(t==NLT_MAX_POOL || t==NLT_MEAN_POOL){
-		// check pool core dimension
-		ASSERT(p->pool_w>=0 && p->pool_h>=0);
-		ASSERT(p->pool_w<=n->l[id-1].l->l[0]->w);
-		ASSERT(p->pool_h<=n->l[id-1].l->l[0]->h);
-		// pooled layer group
-		if(p->pool_w==0){
-			p->pool_w = n->l[id-1].l->l[0]->w;
-		}
-		if(p->pool_h==0){
-			p->pool_h = n->l[id-1].l->l[0]->h;
-		}
-		// pooled layer group
-		n->l[id].l = alloc_layer_group(
-			n->l[id-1].l->n,
-			n->l[id-1].l->l[0]->d,
-			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
-			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
-		);
-		// pooled error partial gradient
-		n->l[id].e = alloc_layer_group(
-			n->l[id-1].l->n,
-			n->l[id-1].l->l[0]->d,
-			(n->l[id-1].l->l[0]->h-1)/p->pool_h+1,
-			(n->l[id-1].l->l[0]->w-1)/p->pool_w+1
-		);
-		// match the output dimension?
-		// to ensure this, plz add a merger
-		// group before such output layer
+	// special dimension check for output layer
+	if(id==n->d-1){
 		ASSERT(n->l[id].l->n==n->o);
 		ASSERT(n->l[id].l->l[0]->d==1);
 		ASSERT(n->l[id].l->l[0]->h==1);
 		ASSERT(n->l[id].l->l[0]->w==1);
-	} else if(t==NLT_MERGE){
-		ASSERT(p->merg_n>=0);
-		// create merger group : trainable params
-		if(p->merg_n==0){
-			p->merg_n = n->o;
-		}
-		n->l[id].m = alloc_merger_group(
-			p->merg_n,
-			n->l[id-1].l->n * n->l[id-1].l->l[0]->d
-		);
-		// create layer
-		n->l[id].l = alloc_layer_group(
-			p->merg_n,
-			1,
-			n->l[id-1].l->l[0]->h,
-			n->l[id-1].l->l[0]->w
-		);
-		// error partial gradient
-		n->l[id].e = alloc_layer_group(
-			p->merg_n,
-			1,
-			n->l[id-1].l->l[0]->h,
-			n->l[id-1].l->l[0]->w
-		);
-		// matches the output dimension?
-		ASSERT(n->l[id].l->n==n->o);
-		ASSERT(n->l[id].l->l[0]->h==1);
-		ASSERT(n->l[id].l->l[0]->w==1);
-	} else if(t==NLT_FULL_CONN){
-		// full conn is a special case for conv
-		// create filter group
-		n->l[id].g = alloc_group(
-			p->full_n, 
-			n->l[id-1].l->l[0]->h, 
-			n->l[id-1].l->l[0]->w
-		);
-		// final map is 1x1 sized
-		n->l[id].l = alloc_layer_group(
-			p->full_n,
-			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
-			1,
-			1
-		);
-		// error partial gradient
-		n->l[id].e = alloc_layer_group(
-			p->full_n,
-			n->l[id-1].l->n*n->l[id-1].l->l[0]->d,
-			1,
-			1
-		);
-		// check dimension
-		// matches the output dimension?
-		ASSERT(n->l[id].l->n==n->o);
-		ASSERT(n->l[id].l->l[0]->d==1);
-		ASSERT(n->l[id].l->l[0]->h==1);
-		ASSERT(n->l[id].l->l[0]->w==1);	
-	} else if(t==NLT_SOFTMAX){
-		ASSERT(0); // currently not applicable
-	} else {
-		ASSERT(0); // bad configuration
 	}
-	// copy params
-	n->l[n->d-1].p = copy_param(p);
 }
 
 int i_str_cmp(const char * s1, const char * s2){
