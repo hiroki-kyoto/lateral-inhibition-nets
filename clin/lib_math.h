@@ -317,7 +317,7 @@ void load_net_model(net * n, const char * file){
 						p
 					);
 				}
-			} else if(i_str_cmp(t, "conv")){
+			} else if(i_str_cmp(t, "conv")){				
 				p->conv_n = d;
 				p->conv_h = h;
 				p->conv_w = w;
@@ -584,7 +584,7 @@ void neural_layer_init(
 	float f_max
 ){
 	int _i, _j, _k;
-	if(l->t==NLT_MERGE){
+	if(l->t==NLT_MERGE){DEBUG("=====MERGE=====\n");
 		// merger param init
 		for(_i=0; _i<l->m->n; ++_i){
 			for(_j=0; _j<l->m->d; ++_j){
@@ -592,9 +592,9 @@ void neural_layer_init(
 			}
 			M_S_B(l->m, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 		}
-	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){
+	} else if(l->t==NLT_CONV_NORMAL||l->t==NLT_CONV_COMBINED||l->t==NLT_FULL_CONN){DEBUG("==CONV/FULL==\n");
 		ASSERT(l);
-		DOT("l is done!\n");
+		DEBUG("l is done!");
 		ASSERT(l->g);
 		DEBUG("filter group depth:%d\n", l->g->n);
 		// convolution filter param init
@@ -606,6 +606,8 @@ void neural_layer_init(
 			}
 			//F_S_B(l->g, _i, (rand()%1000)/1000.0*(f_max-f_min)+f_min);
 		}*/
+	} else {
+		DEBUG("NO_TRAINABLE_VARS\n");
 	}
 }
 
