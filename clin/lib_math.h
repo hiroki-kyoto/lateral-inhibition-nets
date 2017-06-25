@@ -423,16 +423,17 @@ trainer * create_trainer(
 	return t;
 }
 
-// compute gradient and store them on layers,
-// then update the trainable parameters
-void desc_layer(
-	net * n,
-	trainer * t,
-	int i 
-){
+
+// calculate the partial gradient for merge layer
+void 
+merge_grad(
+	net * n,			// net
+	trainer * t,	// trainer
+	int i					// current neural layer index
+	){
 	int _i, _k, _s, _t, _v;
 	
-	int _f;	// activation function
+	int _f;			// activation function
 	int _n[2];	// number of layers in n->l[i-1] and n->l[i]
 	int _d[2];	// number of channels
 	int _h[2];	// height of layers
@@ -440,46 +441,76 @@ void desc_layer(
 	
 	float _sum;	// summation
 	float _dy;	// dy[i]
-	float _y;	// y[i]
+	float _y;		// y[i]
 	float _dx;	// dx[i] = dy[i-1]
-	float _x;	// x[i] = y[i-1]
-	float _p;	// pixel in merger or filter
-	float _b;	// bias in merger or filter
+	float _x;		// x[i] = y[i-1]
+	float _p;		// pixel in merger or filter
+	float _b;		// bias in merger or filter
 
-	ASSERT(i>0 && i<n->d);
+	layer_group * _l[2];	// layer groups
+	layer_group * _e[2];	// error layer groups
+	merger_group * _m[2];	// merger groups
+	param * _pr[2];				// parameters
+
+	_l[0] = n->l[i-1].l;
+	_l[1] = n->l[i].l;
+	_e[0] = n->l[i-1].e;
+	_e[1] = n->l[i].e;
+	_m[0] = n->l[i-1].m;
+	_m[1] = n->l[i].m;
+	_pr[0] = n->l[i-1].p;
+	_pr[1] = n->l[i].p;
+
+	_f		= n->l[i].p->acti_f;
+	_n[0] = _l[0]->n;
+	_n[1] = _l[1]->n;
+	_d[0] = _l[0]->l[0]->d;
+	_d[1] = _l[1]->l[0]->d;
+	_h[0] = _l[0]->l[0]->h;
+	_h[1] = _l[1]->l[0]->h;
+	_w[0] = _l[0]->l[0]->w;
+	_w[1] = _l[1]->l[0]->w;	
 	
-	if(n->l[i].t==NLT_MERGE){
-		// update previous error layer first
-		for(_i=0; _i<n->l[i-1].e->n; ++_i){
-			for(_k=0; _k<n->l[i-1].e->l[0]->d; ++_k){
-				for(_s=0; _s<n->l[i-1].e->l[0]->h; ++_s){
-					for(_t=0; _t<n->l[i-1].e->l[0]->w; ++_t){
-						_sum = 0;
-						for(_v=0; _v<n->l[i].l->n; ++_v){
-							_y = L_G_P(n->l[i].l, _v, 0, _s, _t);
-							_dy = L_G_P(n->l[i].e, _v, 0, _s, _t);
-							if(n->l[i].p->acti_f==ACT_RELU){
-								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t) * (L_G_P(n->l[i].l, _x, 0, _s, _t)>0) * M_G_P(n->l[i].m, _x, _i*n->l[i-1].l->l[0]->d + _k);
-							} else if(n->l[i].p->acti_f==ACT_SIGMOID){
-								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t) * 
-							}
+	// update previous error layer first
+	for(_i=0; _i<_n[0]; ++_i){
+		for(_k=0; _k<_d[0]; ++_k){
+			for(_s=0; _s<_h[0]; ++_s){
+				for(_t=0; _t<_w[0]; ++_t){
+					_sum = 0;
+					for(_v=0; _v<_n[1]; ++_v){
+						_y = L_G_P(_l[1], _v, 0, _s, _t);
+						_dy = L_G_P(_e[1], _v, 0, _s, _t);
+						_p = M_G_P(_m[1], _v, _i*_d[0]+_k);
+						if(_f==ACT_RELU){
+							_sum += _dy*(_y>0)*_p;
+						} else if(n->l[i].p->acti_f==ACT_SIGMOID){
+							_sum += _dy*_y*(1-_y)*_p; 
 						}
-						L_S_P(n->l[i-1].e, _i, _k, _s, _t, _sum);
 					}
+					L_S_P(_e[0], _i, _k, _s, _t, _sum);
 				}
 			}
 		}
+	}
 
-		// update current layer parameters
-		for(_i=0; _i<n->l[i].m->n; ++_i){
-			for(_j=0; _j<n->l[i].m->d; ++_j){
-				if(n->l[i].p->acti_f==ACT_RELU){
-					 
-				} else if(n->l[i].p->acti_f==ACT_SIGMOID){
-					// not supported yet
-				}
-			}
-		}
+	// update current layer parameters
+	
+}
+
+
+// compute gradient and store them on layers,
+// then update the trainable parameters
+void 
+desc_layer(
+		net * n,
+		trainer * t,
+		int i
+		){
+	ASSERT(i>0 && i<n->d);
+	if(n->l[i].t==NLT_MERGE){
+		merge_grad(n, t, i);
+	} else if(n->l[i].t==NLT_CONV_NORMAL){
+		// conv_normal_grad
 	}
 }
 
