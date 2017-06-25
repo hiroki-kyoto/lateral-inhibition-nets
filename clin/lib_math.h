@@ -423,18 +423,41 @@ trainer * create_trainer(
 	return t;
 }
 
-// compute gradient and store them on layers, then update the trainable parameters
+// compute gradient and store them on layers,
+// then update the trainable parameters
 void desc_layer(
 	net * n,
 	trainer * t,
 	int i 
 ){
-	int _i, _j, _k;
+	int _i, _k, _s, _t, _x;
+	float _sum;
+
+	ASSERT(i>0 && i<n->d);
+	
 	if(n->l[i].t==NLT_MERGE){
-		for(_i=0; _i<l[i].m->n; ++_i){
-			for(_j=0; _j<l[i].m->d; ++_j){
+		// update previous error layer first
+		for(_i=0; _i<n->l[i-1].e->n; ++_i){
+			for(_k=0; _k<n->l[i-1].e->l[0]->d; ++_k){
+				for(_s=0; _s<n->l[i-1].e->l[0]->h; ++_s){
+					for(_t=0; _t<n->l[i-1].e->l[0]->w; ++_t){
+						_sum = 0;
+						for(_x=0; _x<n->l[i].l->n; ++_x){
+							if(n->l[i].p->acti_f==ACT_RELU){
+								_sum += L_G_P(n->l[i].e, _x, 0, _s, _t)
+							}
+						}
+						L_S_P(n->l[i-1].e, _i, _k, _s, _t, _sum);
+					}
+				}
+			}
+		}
+
+		// update current layer parameters
+		for(_i=0; _i<n->l[i].m->n; ++_i){
+			for(_j=0; _j<n->l[i].m->d; ++_j){
 				if(n->l[i].p->acti_f==ACT_RELU){
-					
+					 
 				} else if(n->l[i].p->acti_f==ACT_SIGMOID){
 					// not supported yet
 				}
