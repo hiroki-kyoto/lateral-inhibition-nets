@@ -81,7 +81,7 @@ float dataset_get_pixel_safe(dataset * ds, int n, int d, int h, int w){
 
 // The macro way for getting pixel value in dataset by given position
 #ifndef D_G_P
-#define D_G_P(_ds, _n, _d, _h, _w) (_ds->p[_n*_ds->d*_ds->h*_ds->w+_d*_ds->h*_ds->w+_h*_ds->w+_w])
+#define D_G_P(_ds, _n, _d, _h, _w) ((_ds)->p[(_n)*(_ds)->d*(_ds)->h*(_ds)->w+(_d)*(_ds)->h*(_ds)->w+(_h)*(_ds)->w+(_w)])
 #endif
 
 // safe way to get the label of the specified imge in database
@@ -99,7 +99,7 @@ float dataset_get_label_safe(
 
 // inline way to get label
 #ifndef D_G_L
-#define D_G_L(_ds, _c, _i, _k) (_ds->l[_i].data[_c]==_k)
+#define D_G_L(_ds, _c, _i, _k) ((_ds)->l[(_i)].data[(_c)]==(_k))
 #endif
 
 typedef struct T_IMAGE{
@@ -137,7 +137,7 @@ float layer_group_get_pixel_safe(layer_group * lg, int n, int d, int h, int w){
 
 // macro way for getting pixel in layer group
 #ifndef L_G_P
-#define L_G_P(_lg, _n, _d, _h, _w) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w])
+#define L_G_P(_lg, _n, _d, _h, _w) ((_lg)->l[(_n)]->p[(_d)*(_lg)->l[(_n)]->h*(_lg)->l[(_n)]->w+(_h)*(_lg)->l[(_n)]->w+(_w)])
 #endif
 
 // set the pixel of layer group
@@ -149,7 +149,7 @@ float layer_group_set_pixel_safe(float e, layer_group * lg, int n, int d, int h,
 
 // macro way for setting a pixel in layer group
 #ifndef L_S_P
-#define L_S_P(_lg, _n, _d, _h, _w, _e) (_lg->l[_n]->p[_d*_lg->l[_n]->h*_lg->l[_n]->w+_h*_lg->l[_n]->w+_w] = _e)
+#define L_S_P(_lg, _n, _d, _h, _w, _e) ((_lg)->l[(_n)]->p[(_d)*(_lg)->l[(_n)]->h*(_lg)->l[(_n)]->w+(_h)*(_lg)->l[(_n)]->w+(_w)]=(_e))
 #endif
 
 
@@ -175,7 +175,7 @@ float filter_group_get_pixel_safe(
 
 // inline code for get parameters in filter group
 #ifndef F_G_P
-#define F_G_P(_f, _n, _h, _w) (_f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w])
+#define F_G_P(_f, _n, _h, _w) ((_f)->p[(_n)*((_f)->h*(_f)->w+1)+(_h)*(_f)->w+(_w)])
 #endif
 
 void filter_group_set_pixel_safe(
@@ -194,7 +194,7 @@ void filter_group_set_pixel_safe(
 
 // inline code for get parameters in filter group
 #ifndef F_S_P
-#define F_S_P(_f, _n, _h, _w, _v) (_f->p[_n*(_f->h*_f->w+1)+_h*_f->w+_w]=_v)
+#define F_S_P(_f, _n, _h, _w, _v) ((_f)->p[(_n)*((_f)->h*(_f)->w+1)+(_h)*(_f)->w+(_w)]=(_v))
 #endif
 
 float filter_group_get_bias_safe(
@@ -208,7 +208,7 @@ float filter_group_get_bias_safe(
 
 // inline code for get parameters in filter group
 #ifndef F_G_B
-#define F_G_B(_f, _n) (_f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w])
+#define F_G_B(_f, _n) ((_f)->p[(_n)*((_f)->h*(_f)->w+1)+(_f)->h*(_f)->w])
 #endif
 
 void filter_group_set_bias_safe(
@@ -223,7 +223,7 @@ void filter_group_set_bias_safe(
 
 // inline code for get parameters in filter group
 #ifndef F_S_B
-#define F_S_B(_f, _n, _v) (_f->p[_n*(_f->h*_f->w+1)+_f->h*_f->w]=_v)
+#define F_S_B(_f, _n, _v) ((_f)->p[(_n)*((_f)->h*(_f)->w+1)+(_f)->h*(_f)->w]=(_v))
 #endif
 
 typedef struct T_FILTER{
@@ -267,11 +267,11 @@ void merger_group_set_pixel_safe(merger_group * _mg, int _n, int _d, float _v){
 // macro way for getting and setting  merger group bias
 // getting pixel from merger group
 #ifndef M_G_P
-#define M_G_P(_mg, _n, _d) (_mg->p[_n*(_mg->d+1)+_d])
+#define M_G_P(_mg, _n, _d) ((_mg)->p[(_n)*((_mg)->d+1)+(_d)])
 #endif
 // setting pixel for merger group
 #ifndef M_S_P
-#define M_S_P(_mg, _n, _d, _v) (_mg->p[_n*(_mg->d+1)+_d] = _v)
+#define M_S_P(_mg, _n, _d, _v) ((_mg)->p[(_n)*((_mg)->d+1)+(_d)]=(_v))
 #endif
 
 float merger_group_get_bias_safe(merger_group * _mg, int _n){
@@ -289,11 +289,11 @@ void merger_group_set_bias_safe(merger_group * _mg, int _n, float _b){
 // macro way for getting and setting  merger group bias
 // getting bias from merger group
 #ifndef M_G_B
-#define M_G_B(_mg, _n) (_mg->p[_n*(_mg->d+1)+_mg->d])
+#define M_G_B(_mg, _n) ((_mg)->p[(_n)*((_mg)->d+1)+(_mg)->d])
 #endif
 // setting bias for merger group
 #ifndef M_S_B
-#define M_S_B(_mg, _n, _b) (_mg->p[_n*(_mg->d+1)+_mg->d] = _b)
+#define M_S_B(_mg, _n, _b) ((_mg)->p[(_n)*((_mg)->d+1)+(_mg)->d]=(_b))
 #endif
 
 typedef struct T_CHANNEL_MEGER{

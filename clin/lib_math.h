@@ -434,7 +434,7 @@ merge_grad(
 	int _i, _k, _s, _t, _v;
 	
 	int _f;			// activation function
-	int _n[2];	// number of layers in n->l[i-1] and n->l[i]
+	int _n[2];	// number of layers
 	int _d[2];	// number of channels
 	int _h[2];	// height of layers
 	int _w[2];	// width of layers
@@ -442,7 +442,6 @@ merge_grad(
 	float _sum;	// summation
 	float _dy;	// dy[i]
 	float _y;		// y[i]
-	float _dx;	// dx[i] = dy[i-1]
 	float _x;		// x[i] = y[i-1]
 	float _p;		// pixel in merger or filter
 	float _b;		// bias in merger or filter
@@ -450,7 +449,7 @@ merge_grad(
 	layer_group * _l[2];	// layer groups
 	layer_group * _e[2];	// error layer groups
 	merger_group * _m[2];	// merger groups
-	param * _pr[2];				// parameters
+	param * _pr;					// parameters
 
 	_l[0] = n->l[i-1].l;
 	_l[1] = n->l[i].l;
@@ -458,10 +457,9 @@ merge_grad(
 	_e[1] = n->l[i].e;
 	_m[0] = n->l[i-1].m;
 	_m[1] = n->l[i].m;
-	_pr[0] = n->l[i-1].p;
-	_pr[1] = n->l[i].p;
+	_pr		= n->l[i].p;
 
-	_f		= n->l[i].p->acti_f;
+	_f		= _pr->acti_f;
 	_n[0] = _l[0]->n;
 	_n[1] = _l[1]->n;
 	_d[0] = _l[0]->l[0]->d;
@@ -469,7 +467,7 @@ merge_grad(
 	_h[0] = _l[0]->l[0]->h;
 	_h[1] = _l[1]->l[0]->h;
 	_w[0] = _l[0]->l[0]->w;
-	_w[1] = _l[1]->l[0]->w;	
+	_w[1] = _l[1]->l[0]->w;
 	
 	// update previous error layer first
 	for(_i=0; _i<_n[0]; ++_i){
@@ -483,7 +481,7 @@ merge_grad(
 						_p = M_G_P(_m[1], _v, _i*_d[0]+_k);
 						if(_f==ACT_RELU){
 							_sum += _dy*(_y>0)*_p;
-						} else if(n->l[i].p->acti_f==ACT_SIGMOID){
+						} else if(_f==ACT_SIGMOID){
 							_sum += _dy*_y*(1-_y)*_p; 
 						}
 					}
@@ -494,7 +492,36 @@ merge_grad(
 	}
 
 	// update current layer parameters
-	
+	for(_v=0; _v<_n[1]; ++_v){
+		for(_i=0; _i<_n[0]; ++_i){
+			for(_k=0; _k<_d[0]; ++_k){
+				_sum = 0;
+				for(_s=0; _s<_h[1]; ++_s){
+					for(_t=0; _t<_w[1]; ++_t){
+						_y = L_G_P(_l[1], _v, 0, _s, _t);
+						_dy = L_G_P(_e[1], _v, 0, _s, _t);
+						_x = L_G_P(_l[0], _i, _k, _s, _t);
+						if(_f==ACT_RELU){
+							_sum += _dy*(_y>0)*_x;
+						} else if(_f==ACT_SIGMOID){
+							_sum += _dy*_y*(1-_y)*_x;
+						}
+					}
+				}
+				// update trainable parameters
+				M_S_P(_m, _v, _i*_d[0]+_k, _sum*t->ce);
+			}
+		}
+		_sum = 0;
+		for(_s=0; _s<_h[1]; ++_s){
+			for(_t=0; _t<_w[1]; ++_t){
+				_y = L_G_P(_l[1], _v, 0, _s, _t);
+				_dy = L_G_P(_e[1], _v, 0, _s, _t);
+				_sum += _dy*(_y>0);
+			}
+		}
+		M_S_B(_m, _v, _sum*t->ce);
+	}
 }
 
 
