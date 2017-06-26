@@ -167,7 +167,7 @@ void merge_unit(
 	L_S_P(nl, z, 0, y, x, sum);
 }
 
-void merge(
+void merge_layers(
 	layer_group * nl, 
 	layer_group * l, 
 	merger_group * mg
@@ -186,6 +186,59 @@ void merge(
         }
     }
 }
+
+void merge(
+		net * n,
+		trainer * t,
+		int i
+		){
+	int _z;
+	int _y;
+	int _x;
+	int _i;
+ 	int _j;
+	int _k;
+	float _sum;
+	
+	int _n[2];
+	int _d[2];
+	int _h[2];
+	int _w[2];
+
+	ASSERT(i>=0 && i<n->d && n->l[i].t==NLT_MERGE);
+	
+	_n[0] = n->l[i-1].l->n;
+	_n[1] = n->l[i].l->n;
+	_d[0] = n->l[i-1].l->l[0]->d;
+	_d[1] = n->l[i].l->l[0]->d;
+	_h[0] = n->l[i-1].l->l[0]->h;
+	_h[1] = n->l[i].l->l[0]->h;
+	_w[0] = n->l[i-1].l->l[0]->w;
+	_w[1] = n->l[i].l->l[0]->w;
+
+	for(_i=0; _i<_n[1]; ++_i){
+		for(_j=0; _j<_h[1]; ++_j){
+			for(_k=0; _k<_w[1]; ++_k){
+				merge_unit(nl, l, mg, _i, _j, _k);
+			}
+		}
+	}
+
+float sum;
+	int _i, _k;
+	// dimension match?
+	ASSERT(l->n*l->l[0]->d==mg->d);
+	sum = M_G_B(mg, z); //bias
+	for(_i=0; _i<l->n; ++_i){
+		for(_k=0; _k<l->l[0]->d; ++_k){
+			sum += M_G_P(mg, z, _i*l->l[0]->d+_k) * L_G_P(l, _i, _k, y, x);
+		}
+	}
+	L_S_P(nl, z, 0, y, x, sum);
+
+
+}
+
 
 float vmax(float * v, int n){
     int i;
@@ -369,9 +422,11 @@ void compute_layer(
 	ASSERT(i>0 && i<n->d);
 	if(n->l[i].t==NLT_MERGE){
 		DOT("merge");
-		merge(n->l[i].l, n->l[i-1].l, n->l[i].m);
+		//merge(n->l[i].l, n->l[i-1].l, n->l[i].m);
+		merge(n, t, i);
 	} else if(n->l[i].t==NLT_CONV_NORMAL){
 		//conv(n->l[i].l, n->l[i-1].l, n->l[i].g);
+		conv_normal(n, t, i);
 	}
 }
 
@@ -448,15 +503,14 @@ merge_grad(
 
 	layer_group * _l[2];	// layer groups
 	layer_group * _e[2];	// error layer groups
-	merger_group * _m[2];	// merger groups
+	merger_group * _m;		// merger groups
 	param * _pr;					// parameters
 
 	_l[0] = n->l[i-1].l;
 	_l[1] = n->l[i].l;
 	_e[0] = n->l[i-1].e;
 	_e[1] = n->l[i].e;
-	_m[0] = n->l[i-1].m;
-	_m[1] = n->l[i].m;
+	_m		= n->l[i].m;
 	_pr		= n->l[i].p;
 
 	_f		= _pr->acti_f;
@@ -478,7 +532,7 @@ merge_grad(
 					for(_v=0; _v<_n[1]; ++_v){
 						_y = L_G_P(_l[1], _v, 0, _s, _t);
 						_dy = L_G_P(_e[1], _v, 0, _s, _t);
-						_p = M_G_P(_m[1], _v, _i*_d[0]+_k);
+						_p = M_G_P(_m, _v, _i*_d[0]+_k);
 						if(_f==ACT_RELU){
 							_sum += _dy*(_y>0)*_p;
 						} else if(_f==ACT_SIGMOID){
@@ -522,6 +576,16 @@ merge_grad(
 		}
 		M_S_B(_m, _v, _sum*t->ce);
 	}
+}
+
+
+void
+conv_normal_grad(
+		net * n,
+		trainer * t,
+		int i
+		){
+	
 }
 
 
